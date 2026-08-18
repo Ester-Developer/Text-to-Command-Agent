@@ -74,17 +74,20 @@ tests/
    isolated Docker container (`src/sandbox.py`) — see "Docker sandbox"
    below.
 
-The UI (`app.py`) is a compact chat-style layout, not a form-heavy dashboard:
-a single narrow (720px) column, your instructions appear as right-aligned
-chat bubbles, and answers appear as left-aligned dark terminal-style cards
-with color-coded badges for format/syntax/risk/security and an overall
-verdict banner — a red "refused" card when the model declines, an amber
-warning card for empty/unrecognized input. Target OS, prompt version, the
-Docker sandbox button, and the example prompts all live in a collapsed
-"⚙️ Settings" panel out of the way of the main conversation. Everything is
-plain HTML + CSS embedded in the Gradio app (no external assets, works
-offline). Try the built-in examples (including one Hebrew instruction, one
-destructive request, and one gibberish string) to see all four states.
+The UI (`app.py`) has an inline SVG logo, is always dark (a custom Gradio
+theme plus a forced `dark` class, independent of the visitor's OS/browser
+color-scheme setting), and centers on one persistent "Result" panel that
+updates in place on every conversion — a dark terminal-style card with
+color-coded badges for format/syntax/risk/security and an overall verdict
+banner, a red "refused" card when the model declines, or an amber warning
+card for empty/unrecognized input. Target OS, prompt version, the Docker
+sandbox status/button live in an always-open "Settings" panel next to the
+result (not hidden behind a click); the example prompts sit in a small
+"💡 Examples" accordion that expands on click so they don't clutter the
+default view. Everything is plain HTML + CSS + inline SVG embedded in the
+Gradio app (no external assets, works offline). Try the built-in examples
+(including one Hebrew instruction, one destructive request, and one
+gibberish string) to see all four result states.
 
 ## Prompt engineering iterations
 

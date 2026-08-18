@@ -1,4 +1,4 @@
-"""Gradio UI for the Text-to-Command Agent — compact chat-style layout.
+"""Gradio UI for the Text-to-Command Agent — always-dark, persistent result panel.
 
 Run with: python app.py
 Requires GEMINI_API_KEY to be set (see .env.example) - free key from
@@ -22,96 +22,142 @@ EXAMPLES = [
     "asdkj qwoiu banana purple 42",
 ]
 
-CUSTOM_CSS = """
-:root {
-    --agent-bg: #0b0f14;
-    --agent-panel: #11161d;
-    --agent-border: #1f2733;
-    --agent-green: #3ddc84;
+LOGO_SVG = """
+<svg width="42" height="42" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Command Agent logo">
+  <defs>
+    <linearGradient id="agentBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#132018"/>
+      <stop offset="100%" stop-color="#0d1a2b"/>
+    </linearGradient>
+    <linearGradient id="agentGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#3ddc84"/>
+      <stop offset="100%" stop-color="#5aa9ff"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#agentBg)" stroke="#1f2733" stroke-width="2"/>
+  <path d="M18 22 L30 32 L18 42" fill="none" stroke="url(#agentGlow)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="34" y1="42" x2="48" y2="42" stroke="url(#agentGlow)" stroke-width="5.5" stroke-linecap="round"/>
+</svg>
+"""
+
+# Dark palette applied to BOTH the light and dark theme token slots, so the
+# UI stays dark regardless of the visitor's OS/browser color-scheme setting.
+_BG = "#0b0f14"
+_PANEL = "#11161d"
+_PANEL2 = "#0d1218"
+_BORDER = "#1f2733"
+_TEXT = "#d7e0ea"
+_MUTED = "#8593a6"
+_GREEN = "#3ddc84"
+
+DARK_THEME = gr.themes.Base(primary_hue="emerald", neutral_hue="slate").set(
+    body_background_fill=_BG, body_background_fill_dark=_BG,
+    body_text_color=_TEXT, body_text_color_dark=_TEXT,
+    body_text_color_subdued=_MUTED, body_text_color_subdued_dark=_MUTED,
+    background_fill_primary=_PANEL, background_fill_primary_dark=_PANEL,
+    background_fill_secondary=_PANEL2, background_fill_secondary_dark=_PANEL2,
+    border_color_primary=_BORDER, border_color_primary_dark=_BORDER,
+    block_background_fill=_PANEL, block_background_fill_dark=_PANEL,
+    block_border_color=_BORDER, block_border_color_dark=_BORDER,
+    block_label_background_fill=_PANEL2, block_label_background_fill_dark=_PANEL2,
+    block_label_text_color=_MUTED, block_label_text_color_dark=_MUTED,
+    block_title_text_color=_TEXT, block_title_text_color_dark=_TEXT,
+    panel_background_fill=_PANEL, panel_background_fill_dark=_PANEL,
+    panel_border_color=_BORDER, panel_border_color_dark=_BORDER,
+    input_background_fill=_PANEL2, input_background_fill_dark=_PANEL2,
+    input_border_color=_BORDER, input_border_color_dark=_BORDER,
+    input_placeholder_color=_MUTED, input_placeholder_color_dark=_MUTED,
+    button_primary_background_fill=_GREEN, button_primary_background_fill_dark=_GREEN,
+    button_primary_text_color=_BG, button_primary_text_color_dark=_BG,
+    button_secondary_background_fill=_PANEL2, button_secondary_background_fill_dark=_PANEL2,
+    button_secondary_text_color=_TEXT, button_secondary_text_color_dark=_TEXT,
+    button_secondary_border_color=_BORDER, button_secondary_border_color_dark=_BORDER,
+)
+
+# Belt-and-suspenders: also force the "dark" class on <html> at load, so
+# Gradio's own dark-mode CSS branch is active even if the browser reports
+# a light color-scheme preference.
+FORCE_DARK_JS = "() => { document.documentElement.classList.add('dark'); }"
+
+CUSTOM_CSS = f"""
+:root {{
+    --agent-bg: {_BG};
+    --agent-panel: {_PANEL};
+    --agent-panel2: {_PANEL2};
+    --agent-border: {_BORDER};
+    --agent-green: {_GREEN};
     --agent-red: #ff5f6d;
     --agent-amber: #ffc857;
     --agent-blue: #5aa9ff;
-    --agent-text: #d7e0ea;
-    --agent-muted: #8593a6;
-}
+    --agent-text: {_TEXT};
+    --agent-muted: {_MUTED};
+}}
 
-.gradio-container { max-width: 720px !important; margin: 0 auto !important; }
+html, body {{ background: var(--agent-bg) !important; }}
+.gradio-container {{ max-width: 860px !important; margin: 0 auto !important; background: var(--agent-bg) !important; }}
 
-.agent-topbar {
+.agent-topbar {{
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 2px 14px 2px;
-}
-.agent-topbar .agent-icon {
-    font-size: 22px;
-    filter: drop-shadow(0 0 8px rgba(61, 220, 132, 0.55));
-}
-.agent-topbar .agent-title {
+    gap: 12px;
+    padding: 4px 2px 16px 2px;
+}}
+.agent-topbar .agent-title {{
     font-weight: 800;
-    font-size: 15.5px;
+    font-size: 17px;
     background: linear-gradient(90deg, #3ddc84, #5aa9ff 65%, #a78bfa);
     -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.agent-topbar .agent-sub { font-size: 12px; color: var(--agent-muted); }
+}}
+.agent-topbar .agent-sub {{ font-size: 12px; color: var(--agent-muted); margin-top: 1px; }}
 
-.chat-row { display: flex; margin: 0 0 10px 0; }
-.chat-row.user { justify-content: flex-end; }
-.chat-row.agent { justify-content: flex-start; }
+.section-label {{
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--agent-muted);
+    margin: 0 0 8px 2px;
+}}
 
-.bubble-user {
-    background: linear-gradient(135deg, #2a3f5f, #1e2f4a);
-    color: #eaf1ff;
-    padding: 9px 14px;
-    border-radius: 14px 14px 3px 14px;
-    max-width: 85%;
-    font-size: 13.5px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
-
-.bubble-agent-wrap { max-width: 92%; }
-
-.term-card {
-    border-radius: 12px 12px 12px 3px;
+.term-card {{
+    border-radius: 12px;
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
     overflow: hidden;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
-}
-.term-titlebar {
+}}
+.term-titlebar {{
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 6px 10px;
-    background: #0d1218;
+    padding: 7px 11px;
+    background: var(--agent-panel2);
     border-bottom: 1px solid var(--agent-border);
-}
-.term-dot { width: 9px; height: 9px; border-radius: 50%; }
-.term-dot.red { background: #ff5f57; }
-.term-dot.yellow { background: #febc2e; }
-.term-dot.green { background: #28c840; }
-.term-label { margin-left: 6px; color: var(--agent-muted); font-size: 11px; }
+}}
+.term-dot {{ width: 9px; height: 9px; border-radius: 50%; }}
+.term-dot.red {{ background: #ff5f57; }}
+.term-dot.yellow {{ background: #febc2e; }}
+.term-dot.green {{ background: #28c840; }}
+.term-label {{ margin-left: 6px; color: var(--agent-muted); font-size: 11px; }}
 
-.term-body { padding: 12px 14px; }
-.term-command {
+.term-body {{ padding: 14px 16px; }}
+.term-command {{
     color: var(--agent-green);
-    font-size: 14px;
+    font-size: 14.5px;
     white-space: pre-wrap;
     word-break: break-word;
     margin: 0 0 8px 0;
-}
-.term-command::before { content: "$ "; color: var(--agent-muted); }
-.term-explain {
+}}
+.term-command::before {{ content: "$ "; color: var(--agent-muted); }}
+.term-explain {{
     color: var(--agent-text);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 12.5px;
     margin-bottom: 10px;
-}
+}}
 
-.badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
-.badge {
+.badge-row {{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }}
+.badge {{
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -121,77 +167,86 @@ CUSTOM_CSS = """
     font-size: 10.5px;
     font-weight: 600;
     border: 1px solid transparent;
-}
-.badge.ok { background: rgba(61, 220, 132, 0.12); color: var(--agent-green); border-color: rgba(61, 220, 132, 0.35); }
-.badge.bad { background: rgba(255, 95, 109, 0.12); color: var(--agent-red); border-color: rgba(255, 95, 109, 0.35); }
-.badge.warn { background: rgba(255, 200, 87, 0.12); color: var(--agent-amber); border-color: rgba(255, 200, 87, 0.35); }
-.badge.info { background: rgba(90, 169, 255, 0.12); color: var(--agent-blue); border-color: rgba(90, 169, 255, 0.35); }
+}}
+.badge.ok {{ background: rgba(61, 220, 132, 0.12); color: var(--agent-green); border-color: rgba(61, 220, 132, 0.35); }}
+.badge.bad {{ background: rgba(255, 95, 109, 0.12); color: var(--agent-red); border-color: rgba(255, 95, 109, 0.35); }}
+.badge.warn {{ background: rgba(255, 200, 87, 0.12); color: var(--agent-amber); border-color: rgba(255, 200, 87, 0.35); }}
+.badge.info {{ background: rgba(90, 169, 255, 0.12); color: var(--agent-blue); border-color: rgba(90, 169, 255, 0.35); }}
 
-.verdict-banner {
+.verdict-banner {{
     margin-top: 10px;
-    padding: 7px 11px;
+    padding: 8px 12px;
     border-radius: 8px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 700;
     font-size: 11.5px;
-}
-.verdict-banner.safe { background: rgba(61, 220, 132, 0.10); color: var(--agent-green); border: 1px solid rgba(61, 220, 132, 0.35); }
-.verdict-banner.unsafe { background: rgba(255, 95, 109, 0.10); color: var(--agent-red); border: 1px solid rgba(255, 95, 109, 0.35); }
+}}
+.verdict-banner.safe {{ background: rgba(61, 220, 132, 0.10); color: var(--agent-green); border: 1px solid rgba(61, 220, 132, 0.35); }}
+.verdict-banner.unsafe {{ background: rgba(255, 95, 109, 0.10); color: var(--agent-red); border: 1px solid rgba(255, 95, 109, 0.35); }}
 
-.refuse-card {
-    border-radius: 12px 12px 12px 3px;
+.refuse-card {{
+    border-radius: 12px;
     border: 1px solid rgba(255, 95, 109, 0.4);
     background: linear-gradient(135deg, rgba(255, 95, 109, 0.10), rgba(255, 200, 87, 0.06));
-    padding: 12px 14px;
+    padding: 14px 16px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-.refuse-card .refuse-title {
-    font-size: 13px;
+}}
+.refuse-card .refuse-title {{
+    font-size: 13.5px;
     font-weight: 800;
     color: var(--agent-red);
-    margin-bottom: 4px;
+    margin-bottom: 5px;
     display: flex;
     align-items: center;
     gap: 6px;
-}
-.refuse-card .refuse-reason { color: var(--agent-text); font-size: 12.5px; line-height: 1.45; }
+}}
+.refuse-card .refuse-reason {{ color: var(--agent-text); font-size: 12.5px; line-height: 1.5; }}
 
-.warn-card {
-    border-radius: 12px 12px 12px 3px;
+.warn-card {{
+    border-radius: 12px;
     border: 1px solid rgba(255, 200, 87, 0.4);
     background: rgba(255, 200, 87, 0.08);
-    padding: 10px 14px;
+    padding: 12px 16px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--agent-amber);
     font-weight: 600;
     font-size: 12.5px;
-    border-radius: 12px 12px 12px 3px;
-}
+}}
 
-.sandbox-card {
-    border-radius: 12px 12px 12px 3px;
+.sandbox-card {{
+    border-radius: 12px;
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
-    padding: 12px 14px;
+    padding: 12px 16px;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
     color: var(--agent-text);
     font-size: 12px;
     white-space: pre-wrap;
     word-break: break-word;
-}
+    margin-top: 10px;
+}}
 
-.empty-hint {
+.empty-hint {{
     text-align: center;
     color: var(--agent-muted);
     font-size: 12.5px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    padding: 30px 10px;
-}
+    padding: 40px 10px;
+    border: 1px dashed var(--agent-border);
+    border-radius: 12px;
+}}
 
-#input_row { gap: 6px !important; }
-#send_btn { min-width: 44px !important; max-width: 60px !important; }
+.settings-card {{
+    border: 1px solid var(--agent-border);
+    background: var(--agent-panel);
+    border-radius: 12px;
+    padding: 14px 16px 6px 16px;
+}}
 
-footer { display: none !important; }
+#input_row {{ gap: 6px !important; }}
+#send_btn {{ min-width: 44px !important; max-width: 60px !important; }}
+
+footer {{ display: none !important; }}
 """
 
 
@@ -205,6 +260,14 @@ def _badge(ok: bool, ok_text: str, bad_text: str) -> str:
 def _risk_badge(risk_level: str) -> str:
     cls = {"low": "ok", "medium": "warn", "high": "bad"}.get(risk_level, "info")
     return f"<span class='badge {cls}'>⚡ {html.escape(risk_level)}</span>"
+
+
+def _placeholder_html() -> str:
+    return "<div class='empty-hint'>⚡ Ask for a command, e.g. “list files changed in the last day”</div>"
+
+
+def _bad_input_html() -> str:
+    return "<div class='warn-card'>✋ Type an instruction first — the box is empty.</div>"
 
 
 def _result_card(result) -> str:
@@ -256,76 +319,38 @@ def _sandbox_card(sandbox_result) -> str:
     return f"<div class='sandbox-card'>{html.escape(out)}</div>"
 
 
-def _render_transcript(history) -> str:
-    if not history:
-        return "<div class='empty-hint'>⚡ Ask for a command, e.g. “list files changed in the last day”</div>"
-
-    parts = []
-    for turn in history:
-        parts.append(
-            f"<div class='chat-row user'><div class='bubble-user'>{html.escape(turn['instruction'])}</div></div>"
-        )
-        parts.append(
-            f"<div class='chat-row agent'><div class='bubble-agent-wrap'>{turn['agent_html']}</div></div>"
-        )
-        if turn.get("sandbox_html"):
-            parts.append(
-                f"<div class='chat-row agent'><div class='bubble-agent-wrap'>{turn['sandbox_html']}</div></div>"
-            )
-    return "".join(parts)
-
-
-def on_send(instruction, os_choice, prompt_version, history):
-    history = list(history or [])
-    can_run = False
-
+def on_convert(instruction, os_choice, prompt_version):
     if not instruction or not instruction.strip():
-        return _render_transcript(history), history, "", gr.update(interactive=False)
+        return _bad_input_html(), gr.update(interactive=False), None, ""
 
     try:
         result = convert(instruction, os_name=os_choice, prompt_version=prompt_version)
     except RuntimeError as e:
-        agent_html = _refusal_card(str(e), title="⚠️ Configuration error")
-        history.append({"instruction": instruction, "agent_html": agent_html, "command": None})
-        return _render_transcript(history), history, "", gr.update(interactive=False)
+        return _refusal_card(str(e), title="⚠️ Configuration error"), gr.update(interactive=False), None, ""
 
     if result.refused:
-        agent_html = _refusal_card(result.refusal_reason)
-        command = None
-    else:
-        agent_html = _result_card(result)
-        can_run = result.final_safe_to_show_as_runnable and docker_available()
-        command = result.command if can_run else None
+        return _refusal_card(result.refusal_reason), gr.update(interactive=False), None, ""
 
-    history.append({"instruction": instruction, "agent_html": agent_html, "command": command})
-    return _render_transcript(history), history, "", gr.update(interactive=can_run)
+    can_run = result.final_safe_to_show_as_runnable and docker_available()
+    return _result_card(result), gr.update(interactive=can_run), (result.command if can_run else None), ""
 
 
-def on_run_sandbox(history):
-    history = list(history or [])
-    if not history or not history[-1].get("command"):
-        return _render_transcript(history), history
-
-    sandbox_result = run_in_sandbox(history[-1]["command"])
-    history[-1]["sandbox_html"] = _sandbox_card(sandbox_result)
-    return _render_transcript(history), history
+def on_run_sandbox(command):
+    if not command:
+        return ""
+    return _sandbox_card(run_in_sandbox(command))
 
 
 with gr.Blocks(title="Text to Command Agent") as demo:
-    gr.HTML(
-        """
+    gr.HTML(f"""
         <div class="agent-topbar">
-            <span class="agent-icon">⚡</span>
+            {LOGO_SVG}
             <div>
                 <div class="agent-title">Command Agent</div>
                 <div class="agent-sub">text &rarr; terminal command, checked for syntax &amp; safety</div>
             </div>
         </div>
-        """
-    )
-
-    transcript = gr.HTML(_render_transcript([]))
-    history_state = gr.State([])
+    """)
 
     with gr.Row(elem_id="input_row"):
         instruction_box = gr.Textbox(
@@ -334,33 +359,48 @@ with gr.Blocks(title="Text to Command Agent") as demo:
             scale=8,
             container=False,
         )
-        send_btn = gr.Button("➤", variant="primary", scale=1, elem_id="send_btn")
+        convert_btn = gr.Button("➤", variant="primary", scale=1, elem_id="send_btn")
 
-    with gr.Accordion("⚙️ Settings", open=False):
-        with gr.Row():
-            os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS/shell", scale=2)
-            prompt_version_dropdown = gr.Dropdown(
-                ["v1", "v2", "v3"], value="v3", label="Prompt version", scale=1,
-            )
-        run_btn = gr.Button("▶️ Run last command in Docker sandbox (bonus)", interactive=False, size="sm")
-        gr.Markdown(f"Docker sandbox: **{'available' if docker_available() else 'unavailable — start Docker to enable'}**")
-        gr.Examples(examples=[[e] for e in EXAMPLES], inputs=[instruction_box], label="Examples")
+    with gr.Row():
+        with gr.Column(scale=3):
+            gr.HTML("<div class='section-label'>Result</div>")
+            output_html = gr.HTML(_placeholder_html())
+            sandbox_output = gr.HTML("")
 
-    send_btn.click(
-        on_send,
-        inputs=[instruction_box, os_dropdown, prompt_version_dropdown, history_state],
-        outputs=[transcript, history_state, instruction_box, run_btn],
+        with gr.Column(scale=2):
+            gr.HTML("<div class='section-label'>Settings</div>")
+            with gr.Group(elem_classes=["settings-card"]):
+                os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS / shell")
+                prompt_version_dropdown = gr.Dropdown(
+                    ["v1", "v2", "v3"], value="v3", label="Prompt version",
+                )
+                gr.Markdown(
+                    f"Docker sandbox: **{'🟢 available' if docker_available() else '🔴 unavailable — start Docker to enable'}**"
+                )
+                run_btn = gr.Button("▶️ Run last command in sandbox", interactive=False, size="sm")
+
+            with gr.Accordion("💡 Examples", open=False):
+                for example in EXAMPLES:
+                    ex_btn = gr.Button(example, size="sm", variant="secondary")
+                    ex_btn.click(lambda e=example: e, outputs=instruction_box)
+
+    hidden_command_state = gr.State(None)
+
+    convert_btn.click(
+        on_convert,
+        inputs=[instruction_box, os_dropdown, prompt_version_dropdown],
+        outputs=[output_html, run_btn, hidden_command_state, sandbox_output],
     )
     instruction_box.submit(
-        on_send,
-        inputs=[instruction_box, os_dropdown, prompt_version_dropdown, history_state],
-        outputs=[transcript, history_state, instruction_box, run_btn],
+        on_convert,
+        inputs=[instruction_box, os_dropdown, prompt_version_dropdown],
+        outputs=[output_html, run_btn, hidden_command_state, sandbox_output],
     )
     run_btn.click(
         on_run_sandbox,
-        inputs=[history_state],
-        outputs=[transcript, history_state],
+        inputs=[hidden_command_state],
+        outputs=[sandbox_output],
     )
 
 if __name__ == "__main__":
-    demo.launch(css=CUSTOM_CSS, theme=gr.themes.Soft(primary_hue="emerald", neutral_hue="slate"))
+    demo.launch(css=CUSTOM_CSS, theme=DARK_THEME, js=FORCE_DARK_JS)
