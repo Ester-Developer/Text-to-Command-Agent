@@ -5,6 +5,16 @@ Agent שממיר הוראות בשפה טבעית לפקודות טרמינל, �
 sandbox (בונוס). עיקר העבודה בפרויקט היא הנדסת פרומפטים איטרטיבית — ראו
 "Prompt engineering iterations" למטה.
 
+## Screenshots
+
+| Empty state | Successful result |
+|---|---|
+| ![Main screen](screenshots/main.png) | ![Result card](screenshots/result.png) |
+
+| Refused (unclear/unsafe input) | Docker sandbox run |
+|---|---|
+| ![Refused request](screenshots/refused.png) | ![Sandbox output](screenshots/sandbox.png) |
+
 ## Setup
 
 ```bash
