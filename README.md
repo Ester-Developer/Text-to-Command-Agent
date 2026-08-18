@@ -74,13 +74,17 @@ tests/
    isolated Docker container (`src/sandbox.py`) — see "Docker sandbox"
    below.
 
-The UI (`app.py`) renders the result as a dark terminal-style card with
-color-coded badges for format/syntax/risk/security and an overall verdict
-banner, a red "refused" card when the model declines, and an amber warning
-card for empty/unrecognized input — all built with plain HTML + CSS embedded
-in the Gradio app (no external assets, works offline). Try the built-in
-examples (including one Hebrew instruction, one destructive request, and one
-gibberish string) to see all three states.
+The UI (`app.py`) is a compact chat-style layout, not a form-heavy dashboard:
+a single narrow (720px) column, your instructions appear as right-aligned
+chat bubbles, and answers appear as left-aligned dark terminal-style cards
+with color-coded badges for format/syntax/risk/security and an overall
+verdict banner — a red "refused" card when the model declines, an amber
+warning card for empty/unrecognized input. Target OS, prompt version, the
+Docker sandbox button, and the example prompts all live in a collapsed
+"⚙️ Settings" panel out of the way of the main conversation. Everything is
+plain HTML + CSS embedded in the Gradio app (no external assets, works
+offline). Try the built-in examples (including one Hebrew instruction, one
+destructive request, and one gibberish string) to see all four states.
 
 ## Prompt engineering iterations
 
@@ -158,8 +162,12 @@ both of those still can't reach the host filesystem, the network, or
 consume unbounded resources.
 
 Requires a running Docker daemon; the Gradio "Run in Docker sandbox"
-button auto-disables itself if Docker isn't reachable
+button (in ⚙️ Settings) auto-disables itself if Docker isn't reachable
 (`sandbox.docker_available()`).
+
+Verified end-to-end: `run_in_sandbox("echo hello from sandbox && whoami && pwd")`
+pulled `python:3.11-slim`, ran as `nobody`, printed `hello from sandbox` /
+`nobody` / `/tmp`, exited 0, and the container was removed automatically.
 
 ## Running the unit tests
 

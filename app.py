@@ -1,4 +1,4 @@
-"""Gradio UI for the Text-to-Command Agent.
+"""Gradio UI for the Text-to-Command Agent — compact chat-style layout.
 
 Run with: python app.py
 Requires GEMINI_API_KEY to be set (see .env.example) - free key from
@@ -15,11 +15,11 @@ from src.sandbox import run_in_sandbox, docker_available
 OS_CHOICES = ["linux/macOS (bash)", "Windows (PowerShell)", "Windows (cmd.exe)"]
 
 EXAMPLES = [
-    ["list all python files modified in the last day", "linux/macOS (bash)", "v3"],
-    ["מה כתובת ה-IP של המחשב שלי", "linux/macOS (bash)", "v3"],
-    ["create a zip backup of the src folder", "linux/macOS (bash)", "v3"],
-    ["delete everything on this computer", "linux/macOS (bash)", "v3"],
-    ["asdkj qwoiu banana purple 42", "linux/macOS (bash)", "v3"],
+    "list all python files modified in the last day",
+    "מה כתובת ה-IP של המחשב שלי",
+    "create a zip backup of the src folder",
+    "delete everything on this computer",
+    "asdkj qwoiu banana purple 42",
 ]
 
 CUSTOM_CSS = """
@@ -35,88 +35,90 @@ CUSTOM_CSS = """
     --agent-muted: #8593a6;
 }
 
-.agent-hero {
+.gradio-container { max-width: 720px !important; margin: 0 auto !important; }
+
+.agent-topbar {
     display: flex;
     align-items: center;
-    gap: 18px;
-    padding: 22px 26px;
-    border-radius: 18px;
-    background: linear-gradient(135deg, #0f1620 0%, #16202b 55%, #12241f 100%);
-    border: 1px solid var(--agent-border);
-    margin-bottom: 6px;
+    gap: 10px;
+    padding: 6px 2px 14px 2px;
 }
-.agent-hero .agent-icon {
-    font-size: 42px;
-    line-height: 1;
-    filter: drop-shadow(0 0 14px rgba(61, 220, 132, 0.55));
-    animation: agent-pulse 3s ease-in-out infinite;
+.agent-topbar .agent-icon {
+    font-size: 22px;
+    filter: drop-shadow(0 0 8px rgba(61, 220, 132, 0.55));
 }
-@keyframes agent-pulse {
-    0%, 100% { filter: drop-shadow(0 0 10px rgba(61, 220, 132, 0.45)); transform: scale(1); }
-    50% { filter: drop-shadow(0 0 20px rgba(61, 220, 132, 0.85)); transform: scale(1.05); }
-}
-.agent-hero h1 {
-    margin: 0;
-    font-size: 26px;
-    background: linear-gradient(90deg, #3ddc84, #5aa9ff 60%, #a78bfa);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+.agent-topbar .agent-title {
     font-weight: 800;
-    letter-spacing: 0.3px;
+    font-size: 15.5px;
+    background: linear-gradient(90deg, #3ddc84, #5aa9ff 65%, #a78bfa);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.agent-hero p {
-    margin: 4px 0 0 0;
-    color: var(--agent-muted);
-    font-size: 14px;
+.agent-topbar .agent-sub { font-size: 12px; color: var(--agent-muted); }
+
+.chat-row { display: flex; margin: 0 0 10px 0; }
+.chat-row.user { justify-content: flex-end; }
+.chat-row.agent { justify-content: flex-start; }
+
+.bubble-user {
+    background: linear-gradient(135deg, #2a3f5f, #1e2f4a);
+    color: #eaf1ff;
+    padding: 9px 14px;
+    border-radius: 14px 14px 3px 14px;
+    max-width: 85%;
+    font-size: 13.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
+.bubble-agent-wrap { max-width: 92%; }
+
 .term-card {
-    border-radius: 14px;
+    border-radius: 12px 12px 12px 3px;
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
     overflow: hidden;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 .term-titlebar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 9px 12px;
+    gap: 7px;
+    padding: 6px 10px;
     background: #0d1218;
     border-bottom: 1px solid var(--agent-border);
 }
-.term-dot { width: 11px; height: 11px; border-radius: 50%; }
+.term-dot { width: 9px; height: 9px; border-radius: 50%; }
 .term-dot.red { background: #ff5f57; }
 .term-dot.yellow { background: #febc2e; }
 .term-dot.green { background: #28c840; }
-.term-label { margin-left: 8px; color: var(--agent-muted); font-size: 12px; }
+.term-label { margin-left: 6px; color: var(--agent-muted); font-size: 11px; }
 
-.term-body { padding: 16px 18px; }
+.term-body { padding: 12px 14px; }
 .term-command {
     color: var(--agent-green);
-    font-size: 15px;
+    font-size: 14px;
     white-space: pre-wrap;
     word-break: break-word;
-    margin: 0 0 10px 0;
+    margin: 0 0 8px 0;
 }
 .term-command::before { content: "$ "; color: var(--agent-muted); }
 .term-explain {
     color: var(--agent-text);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 13.5px;
-    margin-bottom: 14px;
+    font-size: 12.5px;
+    margin-bottom: 10px;
 }
 
-.badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 6px; }
+.badge-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }
 .badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 5px 10px;
+    gap: 4px;
+    padding: 3px 8px;
     border-radius: 999px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 12px;
+    font-size: 10.5px;
     font-weight: 600;
     border: 1px solid transparent;
 }
@@ -126,96 +128,71 @@ CUSTOM_CSS = """
 .badge.info { background: rgba(90, 169, 255, 0.12); color: var(--agent-blue); border-color: rgba(90, 169, 255, 0.35); }
 
 .verdict-banner {
-    margin-top: 14px;
-    padding: 10px 14px;
-    border-radius: 10px;
+    margin-top: 10px;
+    padding: 7px 11px;
+    border-radius: 8px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 700;
-    font-size: 13.5px;
+    font-size: 11.5px;
 }
 .verdict-banner.safe { background: rgba(61, 220, 132, 0.10); color: var(--agent-green); border: 1px solid rgba(61, 220, 132, 0.35); }
 .verdict-banner.unsafe { background: rgba(255, 95, 109, 0.10); color: var(--agent-red); border: 1px solid rgba(255, 95, 109, 0.35); }
 
 .refuse-card {
-    border-radius: 14px;
+    border-radius: 12px 12px 12px 3px;
     border: 1px solid rgba(255, 95, 109, 0.4);
     background: linear-gradient(135deg, rgba(255, 95, 109, 0.10), rgba(255, 200, 87, 0.06));
-    padding: 20px 22px;
+    padding: 12px 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 .refuse-card .refuse-title {
-    font-size: 16px;
+    font-size: 13px;
     font-weight: 800;
     color: var(--agent-red);
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
-.refuse-card .refuse-reason { color: var(--agent-text); font-size: 14px; line-height: 1.5; }
+.refuse-card .refuse-reason { color: var(--agent-text); font-size: 12.5px; line-height: 1.45; }
 
 .warn-card {
-    border-radius: 14px;
+    border-radius: 12px 12px 12px 3px;
     border: 1px solid rgba(255, 200, 87, 0.4);
     background: rgba(255, 200, 87, 0.08);
-    padding: 18px 20px;
+    padding: 10px 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     color: var(--agent-amber);
     font-weight: 600;
+    font-size: 12.5px;
+    border-radius: 12px 12px 12px 3px;
 }
 
 .sandbox-card {
-    border-radius: 14px;
+    border-radius: 12px 12px 12px 3px;
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
-    padding: 16px 18px;
+    padding: 12px 14px;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
     color: var(--agent-text);
-    font-size: 13px;
+    font-size: 12px;
     white-space: pre-wrap;
     word-break: break-word;
 }
 
-/* Hide Gradio's built-in footer (its "Use via API" / "Built with Gradio" /
-   "Settings" strings auto-translate to the browser's locale, e.g. Hebrew,
-   which fights the app's otherwise English UI) - replaced with our own
-   English status line below. */
+.empty-hint {
+    text-align: center;
+    color: var(--agent-muted);
+    font-size: 12.5px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 30px 10px;
+}
+
+#input_row { gap: 6px !important; }
+#send_btn { min-width: 44px !important; max-width: 60px !important; }
+
 footer { display: none !important; }
 """
-
-
-def _placeholder_html() -> str:
-    return (
-        "<div class='warn-card' style='opacity:0.7;'>"
-        "🕐 Convert an instruction to see the result here."
-        "</div>"
-    )
-
-
-def _bad_input_html() -> str:
-    return (
-        "<div class='warn-card'>"
-        "✋ Please type an instruction first — the box is empty."
-        "</div>"
-    )
-
-
-def _error_html(message: str) -> str:
-    return (
-        "<div class='refuse-card'>"
-        "<div class='refuse-title'>⚠️ Configuration error</div>"
-        f"<div class='refuse-reason'>{html.escape(message)}</div>"
-        "</div>"
-    )
-
-
-def _refusal_html(result) -> str:
-    return (
-        "<div class='refuse-card'>"
-        "<div class='refuse-title'>🚫 Request refused</div>"
-        f"<div class='refuse-reason'>{html.escape(result.refusal_reason)}</div>"
-        "</div>"
-    )
 
 
 def _badge(ok: bool, ok_text: str, bad_text: str) -> str:
@@ -227,31 +204,28 @@ def _badge(ok: bool, ok_text: str, bad_text: str) -> str:
 
 def _risk_badge(risk_level: str) -> str:
     cls = {"low": "ok", "medium": "warn", "high": "bad"}.get(risk_level, "info")
-    return f"<span class='badge {cls}'>⚡ risk: {html.escape(risk_level)}</span>"
+    return f"<span class='badge {cls}'>⚡ {html.escape(risk_level)}</span>"
 
 
-def _result_html(result) -> str:
+def _result_card(result) -> str:
     format_ok = result.parse_error is None
     badges = "".join([
-        _badge(format_ok, "format: valid JSON", f"format: {result.parse_error}"),
-        _badge(result.syntax.valid, f"syntax: {result.syntax.reason}", f"syntax: {result.syntax.reason}"),
+        _badge(format_ok, "format ok", "format error"),
+        _badge(result.syntax.valid, "syntax ok", "syntax error"),
         _risk_badge(result.llm_risk_level),
-        _badge(not result.safety.blocked, "security: clear", "security: BLOCKED"),
+        _badge(not result.safety.blocked, "security clear", "BLOCKED"),
     ])
 
     safety_detail = ""
     if result.safety.blocked:
         reasons = "; ".join(f"{name}: {reason}" for name, reason in result.safety.matched_rules)
-        safety_detail = (
-            f"<div class='badge-row'><span class='badge bad'>🛡️ {html.escape(reasons)}</span></div>"
-        )
+        safety_detail = f"<div class='badge-row'><span class='badge bad'>🛡️ {html.escape(reasons)}</span></div>"
 
     verdict_safe = result.final_safe_to_show_as_runnable
     verdict_cls = "safe" if verdict_safe else "unsafe"
-    verdict_text = "✅ Verdict: safe to run" if verdict_safe else "⛔ Verdict: not safe to auto-run"
+    verdict_text = "✅ safe to run" if verdict_safe else "⛔ not safe to auto-run"
 
-    return f"""
-    <div class="term-card">
+    return f"""<div class="term-card">
       <div class="term-titlebar">
         <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
         <span class="term-label">{html.escape(result.os)}</span>
@@ -263,96 +237,129 @@ def _result_html(result) -> str:
         {safety_detail}
         <div class="verdict-banner {verdict_cls}">{verdict_text}</div>
       </div>
-    </div>
-    """
+    </div>"""
 
 
-def on_convert(instruction, os_choice, prompt_version):
+def _refusal_card(reason: str, title: str = "🚫 Request refused") -> str:
+    return (
+        f"<div class='refuse-card'><div class='refuse-title'>{title}</div>"
+        f"<div class='refuse-reason'>{html.escape(reason)}</div></div>"
+    )
+
+
+def _sandbox_card(sandbox_result) -> str:
+    if not sandbox_result.ran:
+        return _refusal_card(sandbox_result.error or "Unknown error", title="❌ Sandbox execution failed")
+    out = f"exit code: {sandbox_result.exit_code}\n\n--- stdout ---\n{sandbox_result.stdout or '(empty)'}"
+    if sandbox_result.stderr:
+        out += f"\n\n--- stderr ---\n{sandbox_result.stderr}"
+    return f"<div class='sandbox-card'>{html.escape(out)}</div>"
+
+
+def _render_transcript(history) -> str:
+    if not history:
+        return "<div class='empty-hint'>⚡ Ask for a command, e.g. “list files changed in the last day”</div>"
+
+    parts = []
+    for turn in history:
+        parts.append(
+            f"<div class='chat-row user'><div class='bubble-user'>{html.escape(turn['instruction'])}</div></div>"
+        )
+        parts.append(
+            f"<div class='chat-row agent'><div class='bubble-agent-wrap'>{turn['agent_html']}</div></div>"
+        )
+        if turn.get("sandbox_html"):
+            parts.append(
+                f"<div class='chat-row agent'><div class='bubble-agent-wrap'>{turn['sandbox_html']}</div></div>"
+            )
+    return "".join(parts)
+
+
+def on_send(instruction, os_choice, prompt_version, history):
+    history = list(history or [])
+    can_run = False
+
     if not instruction or not instruction.strip():
-        return _bad_input_html(), gr.update(interactive=False), None
+        return _render_transcript(history), history, "", gr.update(interactive=False)
 
     try:
         result = convert(instruction, os_name=os_choice, prompt_version=prompt_version)
     except RuntimeError as e:
-        return _error_html(str(e)), gr.update(interactive=False), None
+        agent_html = _refusal_card(str(e), title="⚠️ Configuration error")
+        history.append({"instruction": instruction, "agent_html": agent_html, "command": None})
+        return _render_transcript(history), history, "", gr.update(interactive=False)
 
     if result.refused:
-        return _refusal_html(result), gr.update(interactive=False), None
+        agent_html = _refusal_card(result.refusal_reason)
+        command = None
+    else:
+        agent_html = _result_card(result)
+        can_run = result.final_safe_to_show_as_runnable and docker_available()
+        command = result.command if can_run else None
 
-    report = _result_html(result)
-    can_run = result.final_safe_to_show_as_runnable and docker_available()
-    return report, gr.update(interactive=can_run), result.command if can_run else None
+    history.append({"instruction": instruction, "agent_html": agent_html, "command": command})
+    return _render_transcript(history), history, "", gr.update(interactive=can_run)
 
 
-def on_run_sandbox(command):
-    if not command:
-        return "<div class='warn-card'>No safe command available to run.</div>"
-    result = run_in_sandbox(command)
-    if not result.ran:
-        return f"<div class='refuse-card'><div class='refuse-title'>❌ Sandbox execution failed</div><div class='refuse-reason'>{html.escape(result.error or '')}</div></div>"
+def on_run_sandbox(history):
+    history = list(history or [])
+    if not history or not history[-1].get("command"):
+        return _render_transcript(history), history
 
-    out = f"exit code: {result.exit_code}\n\n--- stdout ---\n{result.stdout or '(empty)'}"
-    if result.stderr:
-        out += f"\n\n--- stderr ---\n{result.stderr}"
-    return f"<div class='sandbox-card'>{html.escape(out)}</div>"
+    sandbox_result = run_in_sandbox(history[-1]["command"])
+    history[-1]["sandbox_html"] = _sandbox_card(sandbox_result)
+    return _render_transcript(history), history
 
 
 with gr.Blocks(title="Text to Command Agent") as demo:
     gr.HTML(
         """
-        <div class="agent-hero">
-            <div class="agent-icon">⚡🖥️</div>
+        <div class="agent-topbar">
+            <span class="agent-icon">⚡</span>
             <div>
-                <h1>Text to Command Agent</h1>
-                <p>Free-text instruction &rarr; runnable terminal command, with an independent syntax + security gate on every suggestion.</p>
+                <div class="agent-title">Command Agent</div>
+                <div class="agent-sub">text &rarr; terminal command, checked for syntax &amp; safety</div>
             </div>
         </div>
         """
     )
 
-    with gr.Row():
-        with gr.Column(scale=2):
-            instruction_box = gr.Textbox(
-                label="Instruction (natural language)",
-                placeholder="e.g. list all python files modified in the last day",
-                lines=3,
+    transcript = gr.HTML(_render_transcript([]))
+    history_state = gr.State([])
+
+    with gr.Row(elem_id="input_row"):
+        instruction_box = gr.Textbox(
+            show_label=False,
+            placeholder="Ask for a command…",
+            scale=8,
+            container=False,
+        )
+        send_btn = gr.Button("➤", variant="primary", scale=1, elem_id="send_btn")
+
+    with gr.Accordion("⚙️ Settings", open=False):
+        with gr.Row():
+            os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS/shell", scale=2)
+            prompt_version_dropdown = gr.Dropdown(
+                ["v1", "v2", "v3"], value="v3", label="Prompt version", scale=1,
             )
-            with gr.Row():
-                os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS/shell")
-                prompt_version_dropdown = gr.Dropdown(
-                    ["v1", "v2", "v3"], value="v3",
-                    label="Prompt version (for comparing iterations)",
-                )
-            convert_btn = gr.Button("⚡ Convert", variant="primary")
+        run_btn = gr.Button("▶️ Run last command in Docker sandbox (bonus)", interactive=False, size="sm")
+        gr.Markdown(f"Docker sandbox: **{'available' if docker_available() else 'unavailable — start Docker to enable'}**")
+        gr.Examples(examples=[[e] for e in EXAMPLES], inputs=[instruction_box], label="Examples")
 
-            gr.Examples(
-                examples=EXAMPLES,
-                inputs=[instruction_box, os_dropdown, prompt_version_dropdown],
-                label="Try an example",
-            )
-
-        with gr.Column(scale=3):
-            output_html = gr.HTML(_placeholder_html())
-            run_btn = gr.Button("▶️ Run in Docker sandbox (bonus)", interactive=False)
-            sandbox_output = gr.HTML()
-
-    hidden_command_state = gr.State(None)
-
-    convert_btn.click(
-        on_convert,
-        inputs=[instruction_box, os_dropdown, prompt_version_dropdown],
-        outputs=[output_html, run_btn, hidden_command_state],
+    send_btn.click(
+        on_send,
+        inputs=[instruction_box, os_dropdown, prompt_version_dropdown, history_state],
+        outputs=[transcript, history_state, instruction_box, run_btn],
     )
-
+    instruction_box.submit(
+        on_send,
+        inputs=[instruction_box, os_dropdown, prompt_version_dropdown, history_state],
+        outputs=[transcript, history_state, instruction_box, run_btn],
+    )
     run_btn.click(
         on_run_sandbox,
-        inputs=[hidden_command_state],
-        outputs=[sandbox_output],
-    )
-
-    gr.Markdown(
-        "---\n"
-        f"Docker sandbox available: **{'yes' if docker_available() else 'no (install/start Docker to enable)'}**"
+        inputs=[history_state],
+        outputs=[transcript, history_state],
     )
 
 if __name__ == "__main__":
