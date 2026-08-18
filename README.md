@@ -1,9 +1,13 @@
 # Text to Command Agent
 
-Agent שממיר הוראות בשפה טבעית לפקודות טרמינל, עם ממשק Gradio, שכבת אבטחה
-עצמאית (לא תלויה ב-LLM), בדיקת תקינות תחבירית, והרצה בטוחה בתוך Docker
-sandbox (בונוס). עיקר העבודה בפרויקט היא הנדסת פרומפטים איטרטיבית — ראו
-"Prompt engineering iterations" למטה.
+An agent that converts free-text, natural-language instructions into
+runnable terminal commands — built with a Gradio UI, an independent
+security layer that doesn't rely on the LLM's own judgment, syntactic
+validation, and safe execution inside a Docker sandbox (bonus). The core
+engineering effort behind this project was **iterative prompt design** —
+see [Prompt engineering iterations](#prompt-engineering-iterations) below.
+
+---
 
 ## Screenshots
 
@@ -11,9 +15,11 @@ sandbox (בונוס). עיקר העבודה בפרויקט היא הנדסת פ�
 |---|---|
 | ![Main screen](screenshots/main.png) | ![Result card](screenshots/result.png) |
 
-| Refused (unclear/unsafe input) | Docker sandbox run |
+| Refused request (unclear / unsafe input) | Docker sandbox run |
 |---|---|
 | ![Refused request](screenshots/refused.png) | ![Sandbox output](screenshots/sandbox.png) |
+
+---
 
 ## Setup
 
@@ -25,17 +31,19 @@ python app.py
 
 Gradio will print a local URL (typically `http://127.0.0.1:7860`).
 
-**Model choice:** the default model is `gemini-flash-lite-latest`, which has
-the highest free-tier daily request quota. `gemini-3.6-flash` is stronger but
-its free tier is capped around ~20 requests/day and will start returning
-429 rate-limit errors quickly during testing — the app now surfaces those as
-a friendly refusal message instead of crashing, but you can avoid them
-entirely by staying on the lite model (or switching `GEMINI_MODEL` in `.env`
-once you're on a paid plan).
+**Model choice:** the default model is `gemini-flash-lite-latest`, which
+has the highest free-tier daily request quota. `gemini-3.6-flash` is
+stronger but its free tier is capped around ~20 requests/day and starts
+returning 429 rate-limit errors quickly — the app surfaces those as a
+friendly refusal message instead of crashing, but you can avoid them
+entirely by staying on the lite model (or switching `GEMINI_MODEL` in
+`.env` once you're on a paid plan).
 
 The Docker sandbox button is only enabled when a local Docker daemon is
 reachable (`docker ps` works) — if it isn't, the rest of the app still
-works, the button just stays disabled.
+works, the button just stays hidden.
+
+---
 
 ## Project structure
 
@@ -54,76 +62,80 @@ data/
 scripts/
   run_evaluation.py           Re-runs the scenario set live and computes metrics
 tests/
-  test_safety.py, test_syntax_validator.py    Unit tests for the two independent gates
+  test_safety.py, test_syntax_validator.py, test_converter.py    Unit tests
+screenshots/                 UI screenshots (see above)
 ```
+
+---
 
 ## How it works
 
-1. The user types an instruction in the Gradio textbox and picks a target
-   OS/shell.
+1. The user types an instruction into the Gradio textbox and picks a
+   target OS/shell.
 2. `converter.convert()` builds the current system prompt
    (`prompts.PROMPT_CURRENT`, i.e. v3) and calls Gemini, requesting a
-   strict JSON response (command, explanation, os, risk_level, safe,
-   refused, refusal_reason).
+   strict JSON response (`command`, `explanation`, `os`, `risk_level`,
+   `safe`, `refused`, `refusal_reason`).
 3. Independently of what the model says about itself, the app re-checks
    the returned command with:
    - `syntax_validator.check_syntax` — does it tokenize as a well-formed
      shell line (balanced quotes, no dangling operators, non-empty)?
    - `safety.check_command` — does it match any of ~18 known-dangerous
      patterns (`rm -rf /`, fork bombs, `dd` to a device, `mkfs`,
-     `chmod -R 777 /`, `curl | bash`, `shutdown`, Windows `format`/
-     `diskpart`/`reg delete HKLM /f`, etc.)?
+     `chmod -R 777 /`, `curl | bash`, `shutdown`, Windows `format` /
+     `diskpart` / `reg delete HKLM /f`, etc.)?
 4. A command is only ever offered as "safe to run" in the sandbox if
    **every** signal agrees: the model didn't refuse, the model marked it
-   safe, the model's own `risk_level` isn't "high" (a "high" risk_level
-   is never auto-runnable even if `safe: true` — self-contradictory
-   responses do happen; caught live once when a gibberish instruction on
+   safe, the model's own `risk_level` isn't "high" (a "high" risk_level is
+   never auto-runnable even if `safe: true` — self-contradictory responses
+   do happen in practice; caught live once when a nonsense instruction on
    the free lite model came back `risk_level: "high"` + `safe: true` for
-   `dir`, see `tests/test_converter.py`), syntax is valid, and the
-   independent safety gate found nothing. Any single layer disagreeing is
-   enough to withhold the run button. This is a deliberate defense-in-depth
-   design — see the "critical" failures documented in
+   the command `dir` — see `tests/test_converter.py`), syntax is valid, and
+   the independent safety gate found nothing. Any single layer disagreeing
+   is enough to withhold the run button. This is a deliberate
+   defense-in-depth design — see the "critical" failures documented in
    `data/test_scenarios.csv` for v1/v2, where the model alone could not be
    trusted to self-police.
-5. Optionally, the user can run the command inside a disposable, network-
-   isolated Docker container (`src/sandbox.py`) — see "Docker sandbox"
-   below.
+5. Optionally, the user can run the command inside a disposable,
+   network-isolated Docker container (`src/sandbox.py`) — see
+   [Docker sandbox (bonus)](#docker-sandbox-bonus) below.
 
 The UI (`app.py`) has an inline SVG logo in a soft gradient hero card, is
-always light (a custom Gradio theme with explicit hover-state colors, plus
-a forced light-mode class, independent of the visitor's OS/browser
+**always light** (a custom Gradio theme with explicit hover-state colors,
+plus a forced light-mode class, independent of the visitor's OS/browser
 color-scheme setting), and centers on one persistent "Result" panel that
-updates in place on every conversion. The Result panel itself keeps a
-deliberately dark, real-terminal look (CSS custom properties are
-re-scoped just for `.term-card`) so it pops against the light page — with
-color-coded badges for format/syntax/risk/security and an overall verdict
-banner, a red "refused" card when the model declines, or an amber warning
-card for empty/unrecognized input. The "▶️ Run in Docker sandbox" button
-sits directly under the Result panel it acts on, appearing only once
-there's an actual safe command to run (not buried in Settings, not shown
-disabled with no context). Target OS and prompt version live in an
-always-open "Settings" panel beside the result; the example prompts sit in
-a small "💡 Examples" accordion that expands on click so they don't
-clutter the default view. The layout is a fluid two-column grid (up to
-1220px wide) that stacks into a single column under 900px for
-phones/narrow windows.
+updates in place on every conversion. The Result panel itself deliberately
+keeps a dark, real-terminal look (CSS custom properties are re-scoped just
+for `.term-card`) so it pops against the light page — with color-coded
+badges for format/syntax/risk/security and an overall verdict banner, a
+red "refused" card when the model declines, or an amber warning card for
+empty/unrecognized input. The "▶️ Run in Docker sandbox" button sits
+directly under the Result panel it acts on, appearing only once there's an
+actual safe command to run (not buried in Settings, not shown disabled
+with no context). Target OS and prompt version live in an always-open
+"Settings" panel beside the result; the example prompts sit in a small
+"💡 Examples" accordion that expands on click so they don't clutter the
+default view. The layout is a fluid two-column grid (up to 1220px wide)
+that stacks into a single column under 900px for phones/narrow windows.
 Everything is plain HTML + CSS + inline SVG embedded in the Gradio app (no
-external assets, works offline). The built-in example prompts are English
-only, but the agent itself is language-agnostic — typing an instruction in
-Hebrew (or any other language) works exactly the same, see the v3 iteration
-notes below. Try the examples (including one destructive request and one
-gibberish string) to see all four result states.
+external assets). The built-in example prompts are English only, but the
+agent itself is language-agnostic — typing an instruction in Hebrew (or any
+other language) works exactly the same, see the v3 iteration notes below.
+Try the examples (including one destructive request and one nonsense
+string) to see all four result states.
 
-Note: the Docker sandbox container is Linux-based, so the "▶️ Run in
+**Note:** the Docker sandbox container is Linux-based, so the "▶️ Run in
 sandbox" button only appears when the target OS is set to linux/macOS
 (bash) — a Windows command like `ipconfig` would just fail inside the
 Linux container with "not found", which would look like a sandbox bug
 rather than the OS mismatch it actually is. Selecting a Windows target
 shows an inline note explaining this instead of a working button.
 
+---
+
 ## Prompt engineering iterations
 
-The actual engineering work of this project was iterating on the system
+The core engineering work of this project was iterating on the system
 prompt in `src/prompts.py`, tested against the 16 scenarios in
 `data/test_scenarios.csv`. Summary (full detail is in the CSV, one column
 per iteration):
@@ -132,17 +144,17 @@ per iteration):
 |---|---|---|
 | **v1** | Plain-text prompt: "convert this instruction into a shell command" | Output format was inconsistent (sometimes prose-wrapped, sometimes markdown-fenced) — not machine-parseable. No safety concept at all: the model happily produced `rm -rf /`, a fork bomb, `format C: /y`, etc. for destructive requests. |
 | **v2** | Added a strict JSON schema (`command`, `explanation`, `os`, `safe`) and OS targeting | Fixed the format-consistency problem — outputs became parseable. Did **not** fix safety: the model still produced the same destructive commands and simply mislabeled them `"safe": true`, because nothing in the prompt gave it a way to *refuse* or reason about risk tiers. |
-| **v3** (current) | Added `risk_level` (low/medium/high) + `refused`/`refusal_reason` fields, explicit refusal rules for broad/unscoped destructive requests, explicit "don't over-refuse narrowly-scoped requests" rules, a rule + example for gibberish/unclear input, and 6 few-shot examples covering refusal, correct narrow-scoping, and unclear input | Model now correctly refuses catastrophic/unscoped requests (wipe disk, delete everything, fork bomb, kill -1, curl\|bash) while still completing narrowly-scoped destructive requests (`rm temp.log`) instead of over-refusing, and responds with a friendly "I didn't understand that" instead of guessing when given gibberish or unrelated text (in any language — tested in Hebrew too). Combined with the independent `safety.py` gate so a single bad self-classification can never be the only line of defense. |
+| **v3** (current) | Added `risk_level` (low/medium/high) + `refused`/`refusal_reason` fields, explicit refusal rules for broad/unscoped destructive requests, explicit "don't over-refuse narrowly-scoped requests" rules, a rule + example for gibberish/unclear input, and 6 few-shot examples covering refusal, correct narrow-scoping, and unclear input | Model now correctly refuses catastrophic/unscoped requests (wipe disk, delete everything, fork bomb, `kill -1`, `curl\|bash`) while still completing narrowly-scoped destructive requests (`rm temp.log`) instead of over-refusing, and responds with a friendly "I didn't understand that" instead of guessing when given gibberish or unrelated text (in any language — tested in Hebrew too). Combined with the independent `safety.py` gate so a single bad self-classification can never be the only line of defense. |
 
-**Test scenario documentation:** `data/test_scenarios.csv` has 16 scenarios
-across 6 categories (basic, destructive-scoped, destructive-broad,
-dangerous-pattern, permissions, network, process-mgmt, search, archive,
-system, ambiguous, registry) each evaluated by hand against all three
-prompt versions during development. Import that CSV into Google Sheets
-(File → Import → Upload) to get the required "15+ scenarios across 3
-iterations" spreadsheet — each row already documents the v1/v2/v3 output
-and the specific issue found at each step, plus a final PASS/FAIL status
-for the shipped prompt (v3).
+**Test scenario documentation:** `data/test_scenarios.csv` has 16
+scenarios across 12 categories (basic, destructive-scoped,
+destructive-broad, dangerous-pattern, permissions, network, process-mgmt,
+search, archive, system, ambiguous, registry, unclear) each evaluated by
+hand against all three prompt versions during development. Import that
+CSV into Google Sheets (File → Import → Upload) to get the required
+"15+ scenarios across 3 iterations" spreadsheet — each row already
+documents the v1/v2/v3 output and the specific issue found at each step,
+plus a final PASS/FAIL status for the shipped prompt (v3).
 
 To regenerate live results (fresh model calls) instead of relying on the
 hand-logged CSV, run:
@@ -153,6 +165,8 @@ python scripts/run_evaluation.py --version v3 --out data/evaluation_results.csv
 
 You can also pass `--version v1` or `--version v2` to reproduce the
 earlier iterations' behavior against the same scenario set for comparison.
+
+---
 
 ## Evaluation metrics
 
@@ -178,17 +192,19 @@ also live as docstrings in that file):
   "don't over-refuse a narrowly-scoped request" rules and the
   `destructive-scoped` test category).
 
+---
+
 ## Docker sandbox (bonus)
 
 `src/sandbox.py` runs a command that has already passed every check above
 inside a throwaway `python:3.11-slim` container with:
 
-- no network (`network_disabled=True`)
+- no network access (`network_disabled=True`)
 - all Linux capabilities dropped, `no-new-privileges`
 - read-only root filesystem, only a 32MB `tmpfs` at `/tmp` is writable
 - 128MB memory limit, 0.5 CPU, 64 PIDs limit
 - runs as the unprivileged `nobody` user
-- hard wall-clock timeout (15s default), and the container is always
+- a hard wall-clock timeout (15s default), and the container is always
   removed afterward (`finally: container.remove(force=True)`)
 
 This is a second, independent layer of protection on top of the
@@ -196,13 +212,22 @@ LLM-refusal + regex-safety gate — even a command that somehow slipped past
 both of those still can't reach the host filesystem, the network, or
 consume unbounded resources.
 
-Requires a running Docker daemon; the Gradio "Run in Docker sandbox"
-button (in ⚙️ Settings) auto-disables itself if Docker isn't reachable
+Requires a running Docker daemon; the "Run in Docker sandbox" button
+auto-hides itself if Docker isn't reachable
 (`sandbox.docker_available()`).
 
-Verified end-to-end: `run_in_sandbox("echo hello from sandbox && whoami && pwd")`
-pulled `python:3.11-slim`, ran as `nobody`, printed `hello from sandbox` /
+**Verified end-to-end:**
+`run_in_sandbox("echo hello from sandbox && whoami && pwd")` pulled
+`python:3.11-slim`, ran as `nobody`, printed `hello from sandbox` /
 `nobody` / `/tmp`, exited 0, and the container was removed automatically.
+
+**Note:** because the container is network-isolated, commands that report
+network state (e.g. `hostname -I`, `ifconfig`, `curl`, `ping`) will return
+empty or different results than on the real machine — the app detects this
+automatically and shows an explanatory note in the sandbox output so it
+doesn't look like a failure.
+
+---
 
 ## Running the unit tests
 
@@ -211,5 +236,8 @@ python -m unittest discover -s tests -v
 ```
 
 Covers the two independent, non-LLM gates (`safety.py`,
-`syntax_validator.py`) — these must hold regardless of what the model
-does, so they're tested directly rather than through the LLM.
+`syntax_validator.py`), plus regression tests on the `converter.py` logic
+(e.g. a command with `risk_level: "high"` must never be shown as "safe to
+run", even if the model itself mistakenly marked it `safe: true`) — these
+layers must hold regardless of what the model does, so they're tested
+directly rather than only through live LLM calls.
