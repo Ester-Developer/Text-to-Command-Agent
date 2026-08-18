@@ -359,18 +359,18 @@ def _sandbox_card(sandbox_result) -> str:
 
 def on_convert(instruction, os_choice, prompt_version):
     if not instruction or not instruction.strip():
-        return _bad_input_html(), gr.update(interactive=False), None, ""
+        return _bad_input_html(), gr.update(visible=False), None, ""
 
     try:
         result = convert(instruction, os_name=os_choice, prompt_version=prompt_version)
     except RuntimeError as e:
-        return _refusal_card(str(e), title="⚠️ Configuration error"), gr.update(interactive=False), None, ""
+        return _refusal_card(str(e), title="⚠️ Configuration error"), gr.update(visible=False), None, ""
 
     if result.refused:
-        return _refusal_card(result.refusal_reason), gr.update(interactive=False), None, ""
+        return _refusal_card(result.refusal_reason), gr.update(visible=False), None, ""
 
     can_run = result.final_safe_to_show_as_runnable and docker_available()
-    return _result_card(result), gr.update(interactive=can_run), (result.command if can_run else None), ""
+    return _result_card(result), gr.update(visible=can_run, interactive=can_run), (result.command if can_run else None), ""
 
 
 def on_run_sandbox(command):
@@ -403,7 +403,7 @@ with gr.Blocks(title="Text to Command Agent") as demo:
         with gr.Column(scale=3, min_width=340):
             gr.HTML("<div class='section-label'>Result</div>")
             output_html = gr.HTML(_placeholder_html())
-            run_btn = gr.Button("▶️ Run this command in Docker sandbox", interactive=False, size="sm")
+            run_btn = gr.Button("▶️ Run this command in Docker sandbox", visible=False, size="sm")
             sandbox_output = gr.HTML("")
 
         with gr.Column(scale=2, min_width=280):
@@ -412,9 +412,6 @@ with gr.Blocks(title="Text to Command Agent") as demo:
                 os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS / shell")
                 prompt_version_dropdown = gr.Dropdown(
                     ["v1", "v2", "v3"], value="v3", label="Prompt version",
-                )
-                gr.Markdown(
-                    f"Docker sandbox: **{'🟢 available' if docker_available() else '🔴 unavailable — start Docker to enable'}**"
                 )
 
             with gr.Accordion("💡 Examples", open=False):
