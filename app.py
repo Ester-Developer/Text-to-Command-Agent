@@ -1,4 +1,4 @@
-"""Gradio UI for the Text-to-Command Agent — always-dark, persistent result panel.
+"""Gradio UI for the Text-to-Command Agent — light theme, persistent result panel.
 
 Run with: python app.py
 Requires GEMINI_API_KEY to be set (see .env.example) - free key from
@@ -23,7 +23,7 @@ EXAMPLES = [
 ]
 
 LOGO_SVG = """
-<svg width="42" height="42" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Command Agent logo">
+<svg width="52" height="52" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-label="Command Agent logo">
   <defs>
     <linearGradient id="agentBg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#132018"/>
@@ -40,17 +40,22 @@ LOGO_SVG = """
 </svg>
 """
 
-# Dark palette applied to BOTH the light and dark theme token slots, so the
-# UI stays dark regardless of the visitor's OS/browser color-scheme setting.
-_BG = "#0b0f14"
-_PANEL = "#11161d"
-_PANEL2 = "#0d1218"
-_BORDER = "#1f2733"
-_TEXT = "#d7e0ea"
-_MUTED = "#8593a6"
-_GREEN = "#3ddc84"
+# Light palette applied to BOTH the light and dark theme token slots, so the
+# UI stays light regardless of the visitor's OS/browser color-scheme setting.
+# The Result panel's "term-card" is a deliberate exception: it keeps a dark,
+# real-terminal look (see the .term-card variable overrides in CUSTOM_CSS)
+# for visual contrast against the rest of the light page.
+_BG = "#eef1f8"
+_PANEL = "#ffffff"
+_PANEL2 = "#f4f6fb"
+_BORDER = "#dfe4ee"
+_TEXT = "#1e2433"
+_MUTED = "#697086"
+_GREEN = "#17a865"
 
-DARK_THEME = gr.themes.Base(primary_hue="emerald", neutral_hue="slate").set(
+TERM_GREEN = "#4ade80"
+
+LIGHT_THEME = gr.themes.Base(primary_hue="emerald", neutral_hue="slate").set(
     body_background_fill=_BG, body_background_fill_dark=_BG,
     body_text_color=_TEXT, body_text_color_dark=_TEXT,
     body_text_color_subdued=_MUTED, body_text_color_subdued_dark=_MUTED,
@@ -66,31 +71,31 @@ DARK_THEME = gr.themes.Base(primary_hue="emerald", neutral_hue="slate").set(
     panel_border_color=_BORDER, panel_border_color_dark=_BORDER,
     input_background_fill=_PANEL2, input_background_fill_dark=_PANEL2,
     input_background_fill_hover=_PANEL2, input_background_fill_hover_dark=_PANEL2,
-    input_background_fill_focus=_PANEL2, input_background_fill_focus_dark=_PANEL2,
+    input_background_fill_focus=_PANEL, input_background_fill_focus_dark=_PANEL,
     input_border_color=_BORDER, input_border_color_dark=_BORDER,
     input_border_color_hover=_GREEN, input_border_color_hover_dark=_GREEN,
     input_placeholder_color=_MUTED, input_placeholder_color_dark=_MUTED,
     button_primary_background_fill=_GREEN, button_primary_background_fill_dark=_GREEN,
     button_primary_background_fill_hover=_GREEN, button_primary_background_fill_hover_dark=_GREEN,
-    button_primary_text_color=_BG, button_primary_text_color_dark=_BG,
-    button_primary_text_color_hover=_BG, button_primary_text_color_hover_dark=_BG,
-    button_secondary_background_fill=_PANEL2, button_secondary_background_fill_dark=_PANEL2,
-    button_secondary_background_fill_hover=_BORDER, button_secondary_background_fill_hover_dark=_BORDER,
+    button_primary_text_color="#ffffff", button_primary_text_color_dark="#ffffff",
+    button_primary_text_color_hover="#ffffff", button_primary_text_color_hover_dark="#ffffff",
+    button_secondary_background_fill=_PANEL, button_secondary_background_fill_dark=_PANEL,
+    button_secondary_background_fill_hover=_PANEL2, button_secondary_background_fill_hover_dark=_PANEL2,
     button_secondary_text_color=_TEXT, button_secondary_text_color_dark=_TEXT,
     button_secondary_text_color_hover=_TEXT, button_secondary_text_color_hover_dark=_TEXT,
     button_secondary_border_color=_BORDER, button_secondary_border_color_dark=_BORDER,
     button_secondary_border_color_hover=_GREEN, button_secondary_border_color_hover_dark=_GREEN,
-    checkbox_label_background_fill=_PANEL2, checkbox_label_background_fill_dark=_PANEL2,
-    checkbox_label_background_fill_hover=_BORDER, checkbox_label_background_fill_hover_dark=_BORDER,
+    checkbox_label_background_fill=_PANEL, checkbox_label_background_fill_dark=_PANEL,
+    checkbox_label_background_fill_hover=_PANEL2, checkbox_label_background_fill_hover_dark=_PANEL2,
     checkbox_label_text_color=_TEXT, checkbox_label_text_color_dark=_TEXT,
     link_text_color=_GREEN, link_text_color_dark=_GREEN,
     link_text_color_hover=_GREEN, link_text_color_hover_dark=_GREEN,
 )
 
-# Belt-and-suspenders: also force the "dark" class on <html> at load, so
-# Gradio's own dark-mode CSS branch is active even if the browser reports
-# a light color-scheme preference.
-FORCE_DARK_JS = "() => { document.documentElement.classList.add('dark'); }"
+# Belt-and-suspenders: also force the light (non-"dark") class state at
+# load, so Gradio's own theme branch stays light even if the browser
+# reports a dark color-scheme preference.
+FORCE_LIGHT_JS = "() => { document.documentElement.classList.remove('dark'); }"
 
 CUSTOM_CSS = f"""
 :root {{
@@ -99,191 +104,217 @@ CUSTOM_CSS = f"""
     --agent-panel2: {_PANEL2};
     --agent-border: {_BORDER};
     --agent-green: {_GREEN};
-    --agent-red: #ff5f6d;
-    --agent-amber: #ffc857;
-    --agent-blue: #5aa9ff;
+    --agent-red: #dc2626;
+    --agent-amber: #c2760a;
+    --agent-blue: #2563eb;
     --agent-text: {_TEXT};
     --agent-muted: {_MUTED};
 }}
 
-html, body {{ background: var(--agent-bg) !important; }}
+html, body {{
+    background: radial-gradient(circle at 12% 0%, #e6f7ee 0%, transparent 42%),
+                radial-gradient(circle at 88% 10%, #e8eefb 0%, transparent 38%),
+                var(--agent-bg) !important;
+}}
 .gradio-container {{
-    max-width: 1180px !important;
+    max-width: 1220px !important;
     width: 94% !important;
     margin: 0 auto !important;
-    background: var(--agent-bg) !important;
+    background: transparent !important;
 }}
 
-.agent-topbar {{
+.agent-hero {{
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 4px 2px 16px 2px;
+    gap: 16px;
+    padding: 20px 26px;
+    margin: 8px 0 22px 0;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #ffffff 0%, #f3fbf6 60%, #eef4fd 100%);
+    border: 1px solid var(--agent-border);
+    box-shadow: 0 1px 2px rgba(30, 41, 59, 0.04), 0 12px 28px rgba(30, 41, 59, 0.06);
 }}
-.agent-topbar .agent-title {{
+.agent-hero .agent-title {{
     font-weight: 800;
-    font-size: 17px;
-    background: linear-gradient(90deg, #3ddc84, #5aa9ff 65%, #a78bfa);
+    font-size: 21px;
+    background: linear-gradient(90deg, #17a865, #2563eb 65%, #8b5cf6);
     -webkit-background-clip: text; background-clip: text; color: transparent;
 }}
-.agent-topbar .agent-sub {{ font-size: 12px; color: var(--agent-muted); margin-top: 1px; }}
+.agent-hero .agent-sub {{ font-size: 13px; color: var(--agent-muted); margin-top: 3px; }}
 
 .section-label {{
     font-size: 11.5px;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--agent-muted);
-    margin: 0 0 8px 2px;
+    margin: 0 0 10px 2px;
 }}
 
+/* --- Result card: kept as a real dark terminal window for contrast --- */
 .term-card {{
-    border-radius: 12px;
+    --agent-panel: #0f172a;
+    --agent-panel2: #0b1220;
+    --agent-border: #24314a;
+    --agent-text: #e6edf7;
+    --agent-muted: #93a1bd;
+    --agent-green: {TERM_GREEN};
+    --agent-red: #f87171;
+    --agent-amber: #fbbf24;
+    --agent-blue: #7dabff;
+    border-radius: 14px;
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
     overflow: hidden;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.15), 0 16px 32px rgba(15, 23, 42, 0.18);
 }}
 .term-titlebar {{
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 7px 11px;
+    padding: 9px 14px;
     background: var(--agent-panel2);
     border-bottom: 1px solid var(--agent-border);
 }}
-.term-dot {{ width: 9px; height: 9px; border-radius: 50%; }}
+.term-dot {{ width: 10px; height: 10px; border-radius: 50%; }}
 .term-dot.red {{ background: #ff5f57; }}
 .term-dot.yellow {{ background: #febc2e; }}
 .term-dot.green {{ background: #28c840; }}
-.term-label {{ margin-left: 6px; color: var(--agent-muted); font-size: 11px; }}
+.term-label {{ margin-left: 6px; color: var(--agent-muted); font-size: 11.5px; }}
 
-.term-body {{ padding: 14px 16px; }}
+.term-body {{ padding: 18px 20px; }}
 .term-command {{
     color: var(--agent-green);
-    font-size: 14.5px;
+    font-size: 15.5px;
     white-space: pre-wrap;
     word-break: break-word;
-    margin: 0 0 8px 0;
+    margin: 0 0 10px 0;
 }}
 .term-command::before {{ content: "$ "; color: var(--agent-muted); }}
 .term-explain {{
     color: var(--agent-text);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 12.5px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
 }}
 
-.badge-row {{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 5px; }}
+.badge-row {{ display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 6px; }}
 .badge {{
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 8px;
+    padding: 4px 9px;
     border-radius: 999px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    font-size: 10.5px;
+    font-size: 11px;
     font-weight: 600;
     border: 1px solid transparent;
 }}
-.badge.ok {{ background: rgba(61, 220, 132, 0.12); color: var(--agent-green); border-color: rgba(61, 220, 132, 0.35); }}
-.badge.bad {{ background: rgba(255, 95, 109, 0.12); color: var(--agent-red); border-color: rgba(255, 95, 109, 0.35); }}
-.badge.warn {{ background: rgba(255, 200, 87, 0.12); color: var(--agent-amber); border-color: rgba(255, 200, 87, 0.35); }}
-.badge.info {{ background: rgba(90, 169, 255, 0.12); color: var(--agent-blue); border-color: rgba(90, 169, 255, 0.35); }}
+.badge.ok {{ background: rgba(74, 222, 128, 0.14); color: var(--agent-green); border-color: rgba(74, 222, 128, 0.35); }}
+.badge.bad {{ background: rgba(248, 113, 113, 0.14); color: var(--agent-red); border-color: rgba(248, 113, 113, 0.35); }}
+.badge.warn {{ background: rgba(251, 191, 36, 0.14); color: var(--agent-amber); border-color: rgba(251, 191, 36, 0.35); }}
+.badge.info {{ background: rgba(125, 171, 255, 0.14); color: var(--agent-blue); border-color: rgba(125, 171, 255, 0.35); }}
 
 .verdict-banner {{
-    margin-top: 10px;
-    padding: 8px 12px;
+    margin-top: 12px;
+    padding: 9px 13px;
     border-radius: 8px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-weight: 700;
-    font-size: 11.5px;
+    font-size: 12.5px;
 }}
-.verdict-banner.safe {{ background: rgba(61, 220, 132, 0.10); color: var(--agent-green); border: 1px solid rgba(61, 220, 132, 0.35); }}
-.verdict-banner.unsafe {{ background: rgba(255, 95, 109, 0.10); color: var(--agent-red); border: 1px solid rgba(255, 95, 109, 0.35); }}
+.verdict-banner.safe {{ background: rgba(74, 222, 128, 0.12); color: var(--agent-green); border: 1px solid rgba(74, 222, 128, 0.35); }}
+.verdict-banner.unsafe {{ background: rgba(248, 113, 113, 0.12); color: var(--agent-red); border: 1px solid rgba(248, 113, 113, 0.35); }}
 
 .refuse-card {{
-    border-radius: 12px;
-    border: 1px solid rgba(255, 95, 109, 0.4);
-    background: linear-gradient(135deg, rgba(255, 95, 109, 0.10), rgba(255, 200, 87, 0.06));
-    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid #fecaca;
+    background: linear-gradient(135deg, #fef2f2 0%, #fffaf0 100%);
+    padding: 16px 20px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    box-shadow: 0 1px 2px rgba(30, 41, 59, 0.03), 0 10px 22px rgba(30, 41, 59, 0.05);
 }}
 .refuse-card .refuse-title {{
-    font-size: 13.5px;
+    font-size: 14.5px;
     font-weight: 800;
     color: var(--agent-red);
-    margin-bottom: 5px;
+    margin-bottom: 6px;
     display: flex;
     align-items: center;
     gap: 6px;
 }}
-.refuse-card .refuse-reason {{ color: var(--agent-text); font-size: 12.5px; line-height: 1.5; }}
+.refuse-card .refuse-reason {{ color: var(--agent-text); font-size: 13.5px; line-height: 1.55; }}
 
 .warn-card {{
-    border-radius: 12px;
-    border: 1px solid rgba(255, 200, 87, 0.4);
-    background: rgba(255, 200, 87, 0.08);
-    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid #fde68a;
+    background: #fffbeb;
+    padding: 14px 18px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    color: var(--agent-amber);
+    color: #92620a;
     font-weight: 600;
-    font-size: 12.5px;
+    font-size: 13.5px;
 }}
 
 .sandbox-card {{
-    border-radius: 12px;
-    border: 1px solid var(--agent-border);
-    background: var(--agent-panel);
-    padding: 12px 16px;
+    --agent-text: #e6edf7;
+    border-radius: 14px;
+    border: 1px solid #24314a;
+    background: #0f172a;
+    padding: 14px 18px;
     font-family: 'Consolas', 'SFMono-Regular', 'Menlo', monospace;
     color: var(--agent-text);
-    font-size: 12px;
+    font-size: 12.5px;
     white-space: pre-wrap;
     word-break: break-word;
-    margin-top: 10px;
+    margin-top: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12), 0 12px 24px rgba(15, 23, 42, 0.14);
 }}
 
 .empty-hint {{
     text-align: center;
     color: var(--agent-muted);
-    font-size: 12.5px;
+    font-size: 13px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    padding: 40px 10px;
-    border: 1px dashed var(--agent-border);
-    border-radius: 12px;
+    padding: 52px 16px;
+    border: 1.5px dashed var(--agent-border);
+    border-radius: 14px;
+    background: var(--agent-panel);
 }}
 
 .settings-card {{
     border: 1px solid var(--agent-border);
     background: var(--agent-panel);
-    border-radius: 12px;
-    padding: 14px 16px 6px 16px;
+    border-radius: 14px;
+    padding: 16px 18px 8px 18px;
+    box-shadow: 0 1px 2px rgba(30, 41, 59, 0.03), 0 10px 22px rgba(30, 41, 59, 0.05);
 }}
 
-#input_row {{ gap: 6px !important; }}
-#send_btn {{ min-width: 44px !important; max-width: 60px !important; }}
+#input_row {{ gap: 8px !important; margin-bottom: 18px !important; }}
+#send_btn {{ min-width: 48px !important; max-width: 64px !important; }}
 
 footer {{ display: none !important; }}
 
 /* Safety net: some Gradio-internal elements (dropdown option lists,
    table rows, etc.) don't fully follow the theme's hover tokens and can
-   render light-on-light or dark-on-dark text on hover. Force our palette
-   on every common interactive/hoverable element. */
+   render illegible text on hover. Force our palette on every common
+   interactive/hoverable element. */
 button:hover, .dropdown-arrow:hover,
 ul.options li:hover, ul.options li.selected,
 .item:hover, .item.selected,
 li.item:hover {{
     color: var(--agent-text) !important;
-    background-color: var(--agent-border) !important;
+    background-color: var(--agent-panel2) !important;
 }}
-ul.options {{ background: var(--agent-panel2) !important; border-color: var(--agent-border) !important; }}
+ul.options {{ background: var(--agent-panel) !important; border-color: var(--agent-border) !important; }}
 ul.options li {{ color: var(--agent-text) !important; }}
 
 @media (max-width: 900px) {{
     .gradio-container {{ width: 96% !important; }}
     #main_columns {{ flex-direction: column !important; }}
     #main_columns > * {{ width: 100% !important; flex: 1 1 100% !important; }}
+    .agent-hero {{ padding: 16px 18px; }}
 }}
 """
 
@@ -381,7 +412,7 @@ def on_run_sandbox(command):
 
 with gr.Blocks(title="Text to Command Agent") as demo:
     gr.HTML(f"""
-        <div class="agent-topbar">
+        <div class="agent-hero">
             {LOGO_SVG}
             <div>
                 <div class="agent-title">Command Agent</div>
@@ -438,4 +469,4 @@ with gr.Blocks(title="Text to Command Agent") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(css=CUSTOM_CSS, theme=DARK_THEME, js=FORCE_DARK_JS)
+    demo.launch(css=CUSTOM_CSS, theme=LIGHT_THEME, js=FORCE_LIGHT_JS)
