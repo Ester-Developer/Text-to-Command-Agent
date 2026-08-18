@@ -17,6 +17,7 @@ from . import prompts
 from . import llm_client
 from .safety import check_command, SafetyResult
 from .syntax_validator import check_syntax, SyntaxResult
+from .policy import check_prompt_leak, check_off_topic_shape, global_rate_limiter
 
 
 @dataclass
@@ -74,6 +75,18 @@ def convert(instruction: str, os_name: str = "linux/macOS (bash)", prompt_versio
             raw_model_output="", parse_error=None,
         )
 
+    if not global_rate_limiter.allow():
+        wait_s = global_rate_limiter.seconds_until_available()
+        return ConversionResult(
+            instruction=instruction, command="", explanation="", os=os_name,
+            llm_risk_level="low", llm_safe=False, refused=True,
+            refusal_reason=f"Too many requests — please wait {wait_s:.0f}s and try again.",
+            syntax=SyntaxResult(valid=False, reason="No command produced"),
+            safety=SafetyResult(blocked=False, matched_rules=[]),
+            final_safe_to_show_as_runnable=False,
+            raw_model_output="", parse_error=None,
+        )
+
     prompt = prompts.build_prompt(instruction, os_name=os_name, version=prompt_version)
     try:
         raw = llm_client.complete(prompt)
@@ -109,6 +122,21 @@ def convert(instruction: str, os_name: str = "linux/macOS (bash)", prompt_versio
         refused = True
         refusal_reason = refusal_reason or f"Could not parse a valid response from the model ({parse_error})"
         llm_safe = False
+
+    # Independent of anything the model claims about itself: does the raw
+    # output or any field contain leaked fragments of our own system
+    # prompt, or does the command/explanation not match the shape of "one
+    # shell command + one sentence" (a poem, an essay, a code dump)? Either
+    # one is a policy violation and forces a refusal, the same way a
+    # dangerous-pattern match in safety.py does.
+    policy_violation = check_prompt_leak(raw, command, explanation, refusal_reason) or check_off_topic_shape(
+        command, explanation
+    )
+    if policy_violation:
+        refused = True
+        llm_safe = False
+        refusal_reason = f"Blocked by an independent policy check: {policy_violation}"
+        command = ""
 
     syntax_result = check_syntax(command) if command else SyntaxResult(valid=False, reason="No command produced")
     safety_result = check_command(command)
