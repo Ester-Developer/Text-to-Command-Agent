@@ -6,6 +6,7 @@ https://aistudio.google.com/apikey
 """
 
 import html
+import re
 
 import gradio as gr
 
@@ -398,13 +399,35 @@ def _refusal_card(reason: str, title: str = "🚫 Request refused") -> str:
     )
 
 
-def _sandbox_card(sandbox_result) -> str:
+# The sandbox container runs with network_disabled=True (see src/sandbox.py)
+# for isolation, so a command that reports network state - not just ones
+# that reach out to the internet - will show empty/misleading results
+# there versus on the real machine (e.g. "hostname -I" finds no non-
+# loopback interface to report, so it prints nothing).
+_NETWORK_COMMAND_RE = re.compile(
+    r"\b(hostname\s+-I|ifconfig|ip\s+a(ddr)?|curl|wget|ping|nslookup|dig|netstat|ss\s|traceroute|nmap)\b"
+)
+
+
+def _sandbox_card(sandbox_result, command: str = "") -> str:
     if not sandbox_result.ran:
         return _refusal_card(sandbox_result.error or "Unknown error", title="❌ Sandbox execution failed")
+
+    note = ""
+    if _NETWORK_COMMAND_RE.search(command or ""):
+        note = (
+            "<p class='term-explain' style='margin-bottom:10px;'>"
+            "🌐 The sandbox container has no network access (disabled for isolation), "
+            "so network-related output here (IP addresses, connectivity, DNS, etc.) "
+            "will differ from — or be empty compared to — running the same command on "
+            "your real machine."
+            "</p>"
+        )
+
     out = f"exit code: {sandbox_result.exit_code}\n\n--- stdout ---\n{sandbox_result.stdout or '(empty)'}"
     if sandbox_result.stderr:
         out += f"\n\n--- stderr ---\n{sandbox_result.stderr}"
-    return f"<div class='sandbox-card'>{html.escape(out)}</div>"
+    return f"<div class='sandbox-card'>{note}{html.escape(out)}</div>"
 
 
 def on_convert(instruction, os_choice, prompt_version):
@@ -435,7 +458,7 @@ def on_convert(instruction, os_choice, prompt_version):
 def on_run_sandbox(command):
     if not command:
         return ""
-    return _sandbox_card(run_in_sandbox(command))
+    return _sandbox_card(run_in_sandbox(command), command)
 
 
 with gr.Blocks(title="Text to Command Agent") as demo:
