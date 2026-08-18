@@ -1,5 +1,6 @@
 """Thin wrapper around the Google Gemini API (free tier) used by the converter."""
 
+import logging
 import os
 from google import genai
 from google.genai import types
@@ -7,7 +8,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+logging.getLogger("google_genai.models").setLevel(logging.ERROR)
+
+_DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
 
 _client = None
 
