@@ -14,9 +14,17 @@ from src.sandbox import run_in_sandbox, docker_available
 
 OS_CHOICES = ["linux/macOS (bash)", "Windows (PowerShell)", "Windows (cmd.exe)"]
 
+# The sandbox container (python:3.11-slim) is Linux-based, so it can only
+# actually execute bash/POSIX commands - a Windows command like "ipconfig"
+# would just fail inside it with "command not found", which would be
+# misleading (looks like a sandbox failure, but is really just an OS
+# mismatch). Only offer sandbox execution when the generated command
+# targets this OS.
+SANDBOX_COMPATIBLE_OS = "linux/macOS (bash)"
+
 EXAMPLES = [
     "list all python files modified in the last day",
-    "מה כתובת ה-IP של המחשב שלי",
+    "what is my computer's IP address",
     "create a zip backup of the src folder",
     "delete everything on this computer",
     "asdkj qwoiu banana purple 42",
@@ -339,7 +347,7 @@ def _bad_input_html() -> str:
     return "<div class='warn-card'>✋ Type an instruction first — the box is empty.</div>"
 
 
-def _result_card(result) -> str:
+def _result_card(result, os_choice: str) -> str:
     format_ok = result.parse_error is None
     badges = "".join([
         _badge(format_ok, "format ok", "format error"),
@@ -357,6 +365,16 @@ def _result_card(result) -> str:
     verdict_cls = "safe" if verdict_safe else "unsafe"
     verdict_text = "✅ safe to run" if verdict_safe else "⛔ not safe to auto-run"
 
+    sandbox_note = ""
+    if verdict_safe and os_choice != SANDBOX_COMPATIBLE_OS:
+        sandbox_note = (
+            "<p class='term-explain' style='margin-top:8px;'>"
+            "🐳 Docker sandbox validation only supports linux/macOS (bash) commands "
+            "— the container itself is Linux-based, so a Windows command would just "
+            f"fail there with \"not found\" (switch Target OS to run it in the sandbox)."
+            "</p>"
+        )
+
     return f"""<div class="term-card">
       <div class="term-titlebar">
         <span class="term-dot red"></span><span class="term-dot yellow"></span><span class="term-dot green"></span>
@@ -366,6 +384,7 @@ def _result_card(result) -> str:
         <p class="term-command">{html.escape(result.command)}</p>
         <p class="term-explain">{html.escape(result.explanation)}</p>
         <div class="badge-row">{badges}</div>
+        {sandbox_note}
         {safety_detail}
         <div class="verdict-banner {verdict_cls}">{verdict_text}</div>
       </div>
@@ -400,8 +419,17 @@ def on_convert(instruction, os_choice, prompt_version):
     if result.refused:
         return _refusal_card(result.refusal_reason), gr.update(visible=False), None, ""
 
-    can_run = result.final_safe_to_show_as_runnable and docker_available()
-    return _result_card(result), gr.update(visible=can_run, interactive=can_run), (result.command if can_run else None), ""
+    can_run = (
+        result.final_safe_to_show_as_runnable
+        and docker_available()
+        and os_choice == SANDBOX_COMPATIBLE_OS
+    )
+    return (
+        _result_card(result, os_choice),
+        gr.update(visible=can_run, interactive=can_run),
+        (result.command if can_run else None),
+        "",
+    )
 
 
 def on_run_sandbox(command):

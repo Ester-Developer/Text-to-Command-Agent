@@ -93,9 +93,18 @@ clutter the default view. The layout is a fluid two-column grid (up to
 1220px wide) that stacks into a single column under 900px for
 phones/narrow windows.
 Everything is plain HTML + CSS + inline SVG embedded in the Gradio app (no
-external assets, works offline). Try the built-in examples
-(including one Hebrew instruction, one destructive request, and one
+external assets, works offline). The built-in example prompts are English
+only, but the agent itself is language-agnostic — typing an instruction in
+Hebrew (or any other language) works exactly the same, see the v3 iteration
+notes below. Try the examples (including one destructive request and one
 gibberish string) to see all four result states.
+
+Note: the Docker sandbox container is Linux-based, so the "▶️ Run in
+sandbox" button only appears when the target OS is set to linux/macOS
+(bash) — a Windows command like `ipconfig` would just fail inside the
+Linux container with "not found", which would look like a sandbox bug
+rather than the OS mismatch it actually is. Selecting a Windows target
+shows an inline note explaining this instead of a working button.
 
 ## Prompt engineering iterations
 
