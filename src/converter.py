@@ -113,9 +113,15 @@ def convert(instruction: str, os_name: str = "linux/macOS (bash)", prompt_versio
     syntax_result = check_syntax(command) if command else SyntaxResult(valid=False, reason="No command produced")
     safety_result = check_command(command)
 
+    # A "high" risk_level is never auto-runnable, even if the model also
+    # claims safe=true. Without this, a self-contradictory response (e.g.
+    # risk_level="high" + safe=true, observed live for a nonsense/gibberish
+    # instruction that should have been refused) would still show a
+    # green "safe to run" badge and offer one-click sandbox execution.
     final_safe = (
         not refused
         and llm_safe
+        and llm_risk_level != "high"
         and syntax_result.valid
         and not safety_result.blocked
     )

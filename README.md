@@ -64,12 +64,17 @@ tests/
      `chmod -R 777 /`, `curl | bash`, `shutdown`, Windows `format`/
      `diskpart`/`reg delete HKLM /f`, etc.)?
 4. A command is only ever offered as "safe to run" in the sandbox if
-   **all three** signals agree: the model didn't refuse, the model marked
-   it safe, syntax is valid, and the independent safety gate found nothing.
-   Any single layer disagreeing is enough to withhold the run button. This
-   is a deliberate defense-in-depth design — see the "critical" failures
-   documented in `data/test_scenarios.csv` for v1/v2, where the model
-   alone could not be trusted to self-police.
+   **every** signal agrees: the model didn't refuse, the model marked it
+   safe, the model's own `risk_level` isn't "high" (a "high" risk_level
+   is never auto-runnable even if `safe: true` — self-contradictory
+   responses do happen; caught live once when a gibberish instruction on
+   the free lite model came back `risk_level: "high"` + `safe: true` for
+   `dir`, see `tests/test_converter.py`), syntax is valid, and the
+   independent safety gate found nothing. Any single layer disagreeing is
+   enough to withhold the run button. This is a deliberate defense-in-depth
+   design — see the "critical" failures documented in
+   `data/test_scenarios.csv` for v1/v2, where the model alone could not be
+   trusted to self-police.
 5. Optionally, the user can run the command inside a disposable, network-
    isolated Docker container (`src/sandbox.py`) — see "Docker sandbox"
    below.
