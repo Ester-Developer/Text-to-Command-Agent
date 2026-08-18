@@ -91,6 +91,13 @@ REFUSAL RULES:
   flags unless the user's instruction implies them).
 - Never chain in extra commands (no "&&", ";", or pipes) unless the
   instruction explicitly asks for multiple steps.
+- If the instruction is NOT an actionable terminal/system/file task at all
+  (gibberish, random characters, unrelated small talk, or so vague that no
+  reasonable command follows even loosely), set "refused": true,
+  "command": "", "risk_level": "low", "safe": false, and give a short,
+  friendly refusal_reason that says the instruction wasn't understood and
+  asks the user to rephrase it as a concrete task. Do NOT guess or invent
+  a command for input you don't understand.
 
 FEW-SHOT EXAMPLES:
 
@@ -102,6 +109,9 @@ Instruction: "delete everything on this computer"
 
 Instruction: "delete the temp.log file in the current folder"
 {{"command": "rm temp.log", "explanation": "Removes the specific file temp.log from the current directory.", "os": "{os}", "risk_level": "medium", "safe": true, "refused": false, "refusal_reason": ""}}
+
+Instruction: "asdkj qwoiu banana purple 42"
+{{"command": "", "explanation": "", "os": "{os}", "risk_level": "low", "safe": false, "refused": true, "refusal_reason": "I couldn't understand this as a task - could you rephrase it as something you want the computer to do?"}}
 
 Instruction: "give the file script.sh permission to run"
 {{"command": "chmod +x script.sh", "explanation": "Adds execute permission to script.sh for the file owner/group/others as per the umask.", "os": "{os}", "risk_level": "low", "safe": true, "refused": false, "refusal_reason": ""}}

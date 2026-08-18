@@ -36,6 +36,17 @@ class ConversionResult:
     parse_error: Optional[str] = None
 
 
+def _friendly_api_error(e: Exception) -> str:
+    text = str(e)
+    if "429" in text or "RESOURCE_EXHAUSTED" in text:
+        return (
+            "The free Gemini API quota was hit (rate limit). Wait a bit and try again, "
+            "or switch GEMINI_MODEL to a lighter model with a higher free quota "
+            "(e.g. gemini-3.6-flash-lite) in your .env file."
+        )
+    return f"The model API request failed: {text[:200]}"
+
+
 def _extract_json(text: str) -> dict:
     """The model is instructed to return raw JSON, but be tolerant of
     stray markdown fences some models occasionally add anyway."""
@@ -64,7 +75,20 @@ def convert(instruction: str, os_name: str = "linux/macOS (bash)", prompt_versio
         )
 
     prompt = prompts.build_prompt(instruction, os_name=os_name, version=prompt_version)
-    raw = llm_client.complete(prompt)
+    try:
+        raw = llm_client.complete(prompt)
+    except RuntimeError:
+        raise
+    except Exception as e:
+        return ConversionResult(
+            instruction=instruction, command="", explanation="", os=os_name,
+            llm_risk_level="low", llm_safe=False, refused=True,
+            refusal_reason=_friendly_api_error(e),
+            syntax=SyntaxResult(valid=False, reason="No command produced"),
+            safety=SafetyResult(blocked=False, matched_rules=[]),
+            final_safe_to_show_as_runnable=False,
+            raw_model_output="", parse_error=str(e),
+        )
 
     try:
         data = _extract_json(raw)

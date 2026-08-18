@@ -10,7 +10,7 @@ load_dotenv()
 
 logging.getLogger("google_genai.models").setLevel(logging.ERROR)
 
-_DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.6-flash")
+_DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
 
 _client = None
 
@@ -28,8 +28,18 @@ def get_client() -> genai.Client:
     return _client
 
 
-def complete(prompt: str, model: str = None, max_tokens: int = 500, temperature: float = 0.0) -> str:
-    """Send a single-turn prompt and return the raw text response."""
+def complete(prompt: str, model: str = None, max_tokens: int = 2048, temperature: float = 0.0) -> str:
+    """Send a single-turn prompt and return the raw text response.
+
+    On thinking-capable Gemini models, reasoning tokens are drawn from the
+    same max_output_tokens budget as the visible answer. With a low budget
+    this was silently truncating our JSON response before it finished
+    (e.g. "hostname -I" -> cut off mid-explanation -> downstream JSON parse
+    error). thinking_level="low" keeps reasoning light, and a larger
+    max_output_tokens leaves headroom either way.
+    response_mime_type="application/json" makes the API guarantee raw
+    JSON output with no markdown fences.
+    """
     client = get_client()
     response = client.models.generate_content(
         model=model or _DEFAULT_MODEL,
@@ -37,6 +47,8 @@ def complete(prompt: str, model: str = None, max_tokens: int = 500, temperature:
         config=types.GenerateContentConfig(
             max_output_tokens=max_tokens,
             temperature=temperature,
+            response_mime_type="application/json",
+            thinking_config=types.ThinkingConfig(thinking_level="low"),
         ),
     )
     return (response.text or "").strip()

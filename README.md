@@ -15,6 +15,14 @@ python app.py
 
 Gradio will print a local URL (typically `http://127.0.0.1:7860`).
 
+**Model choice:** the default model is `gemini-flash-lite-latest`, which has
+the highest free-tier daily request quota. `gemini-3.6-flash` is stronger but
+its free tier is capped around ~20 requests/day and will start returning
+429 rate-limit errors quickly during testing — the app now surfaces those as
+a friendly refusal message instead of crashing, but you can avoid them
+entirely by staying on the lite model (or switching `GEMINI_MODEL` in `.env`
+once you're on a paid plan).
+
 The Docker sandbox button is only enabled when a local Docker daemon is
 reachable (`docker ps` works) — if it isn't, the rest of the app still
 works, the button just stays disabled.
@@ -66,6 +74,14 @@ tests/
    isolated Docker container (`src/sandbox.py`) — see "Docker sandbox"
    below.
 
+The UI (`app.py`) renders the result as a dark terminal-style card with
+color-coded badges for format/syntax/risk/security and an overall verdict
+banner, a red "refused" card when the model declines, and an amber warning
+card for empty/unrecognized input — all built with plain HTML + CSS embedded
+in the Gradio app (no external assets, works offline). Try the built-in
+examples (including one Hebrew instruction, one destructive request, and one
+gibberish string) to see all three states.
+
 ## Prompt engineering iterations
 
 The actual engineering work of this project was iterating on the system
@@ -77,7 +93,7 @@ per iteration):
 |---|---|---|
 | **v1** | Plain-text prompt: "convert this instruction into a shell command" | Output format was inconsistent (sometimes prose-wrapped, sometimes markdown-fenced) — not machine-parseable. No safety concept at all: the model happily produced `rm -rf /`, a fork bomb, `format C: /y`, etc. for destructive requests. |
 | **v2** | Added a strict JSON schema (`command`, `explanation`, `os`, `safe`) and OS targeting | Fixed the format-consistency problem — outputs became parseable. Did **not** fix safety: the model still produced the same destructive commands and simply mislabeled them `"safe": true`, because nothing in the prompt gave it a way to *refuse* or reason about risk tiers. |
-| **v3** (current) | Added `risk_level` (low/medium/high) + `refused`/`refusal_reason` fields, explicit refusal rules for broad/unscoped destructive requests, explicit "don't over-refuse narrowly-scoped requests" rules, and 5 few-shot examples covering both refusal and correct narrow-scoping | Model now correctly refuses catastrophic/unscoped requests (wipe disk, delete everything, fork bomb, kill -1, curl\|bash) while still completing narrowly-scoped destructive requests (`rm temp.log`) instead of over-refusing. Combined with the independent `safety.py` gate so a single bad self-classification can never be the only line of defense. |
+| **v3** (current) | Added `risk_level` (low/medium/high) + `refused`/`refusal_reason` fields, explicit refusal rules for broad/unscoped destructive requests, explicit "don't over-refuse narrowly-scoped requests" rules, a rule + example for gibberish/unclear input, and 6 few-shot examples covering refusal, correct narrow-scoping, and unclear input | Model now correctly refuses catastrophic/unscoped requests (wipe disk, delete everything, fork bomb, kill -1, curl\|bash) while still completing narrowly-scoped destructive requests (`rm temp.log`) instead of over-refusing, and responds with a friendly "I didn't understand that" instead of guessing when given gibberish or unrelated text (in any language — tested in Hebrew too). Combined with the independent `safety.py` gate so a single bad self-classification can never be the only line of defense. |
 
 **Test scenario documentation:** `data/test_scenarios.csv` has 16 scenarios
 across 6 categories (basic, destructive-scoped, destructive-broad,
