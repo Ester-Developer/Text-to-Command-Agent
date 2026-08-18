@@ -4,7 +4,8 @@ aggregate evaluation metrics.
 Usage:
     python scripts/run_evaluation.py [--version v3] [--out data/evaluation_results.csv]
 
-Requires ANTHROPIC_API_KEY (see .env.example). This is what actually
+Requires GEMINI_API_KEY (see .env.example, free key from
+https://aistudio.google.com/apikey). This is what actually
 exercises the model -- data/test_scenarios.csv is the curated log of what
 we already observed while iterating on the prompt (v1 -> v2 -> v3); this
 script lets you re-run the current prompt version against the same

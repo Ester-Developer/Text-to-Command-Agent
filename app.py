@@ -1,7 +1,8 @@
 """Gradio UI for the Text-to-Command Agent.
 
 Run with: python app.py
-Requires ANTHROPIC_API_KEY to be set (see .env.example).
+Requires GEMINI_API_KEY to be set (see .env.example) - free key from
+https://aistudio.google.com/apikey
 """
 
 import gradio as gr

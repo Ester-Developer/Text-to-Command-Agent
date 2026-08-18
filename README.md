@@ -9,7 +9,7 @@ sandbox (בונוס). עיקר העבודה בפרויקט היא הנדסת פ�
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env   # then edit .env and set ANTHROPIC_API_KEY
+cp .env.example .env   # then edit .env and set GEMINI_API_KEY (free key: https://aistudio.google.com/apikey)
 python app.py
 ```
 
@@ -25,7 +25,7 @@ works, the button just stays disabled.
 app.py                     Gradio UI (entry point)
 src/
   prompts.py                All 3 prompt-engineering iterations (v1, v2, v3)
-  llm_client.py              Thin Anthropic API wrapper
+  llm_client.py              Thin Google Gemini API wrapper (free tier)
   converter.py                instruction -> LLM -> parsed + validated result
   safety.py                    Independent regex-based dangerous-command gate
   syntax_validator.py           shlex-based syntactic validity check
@@ -44,7 +44,7 @@ tests/
 1. The user types an instruction in the Gradio textbox and picks a target
    OS/shell.
 2. `converter.convert()` builds the current system prompt
-   (`prompts.PROMPT_CURRENT`, i.e. v3) and calls Claude, requesting a
+   (`prompts.PROMPT_CURRENT`, i.e. v3) and calls Gemini, requesting a
    strict JSON response (command, explanation, os, risk_level, safe,
    refused, refusal_reason).
 3. Independently of what the model says about itself, the app re-checks
