@@ -65,13 +65,26 @@ DARK_THEME = gr.themes.Base(primary_hue="emerald", neutral_hue="slate").set(
     panel_background_fill=_PANEL, panel_background_fill_dark=_PANEL,
     panel_border_color=_BORDER, panel_border_color_dark=_BORDER,
     input_background_fill=_PANEL2, input_background_fill_dark=_PANEL2,
+    input_background_fill_hover=_PANEL2, input_background_fill_hover_dark=_PANEL2,
+    input_background_fill_focus=_PANEL2, input_background_fill_focus_dark=_PANEL2,
     input_border_color=_BORDER, input_border_color_dark=_BORDER,
+    input_border_color_hover=_GREEN, input_border_color_hover_dark=_GREEN,
     input_placeholder_color=_MUTED, input_placeholder_color_dark=_MUTED,
     button_primary_background_fill=_GREEN, button_primary_background_fill_dark=_GREEN,
+    button_primary_background_fill_hover=_GREEN, button_primary_background_fill_hover_dark=_GREEN,
     button_primary_text_color=_BG, button_primary_text_color_dark=_BG,
+    button_primary_text_color_hover=_BG, button_primary_text_color_hover_dark=_BG,
     button_secondary_background_fill=_PANEL2, button_secondary_background_fill_dark=_PANEL2,
+    button_secondary_background_fill_hover=_BORDER, button_secondary_background_fill_hover_dark=_BORDER,
     button_secondary_text_color=_TEXT, button_secondary_text_color_dark=_TEXT,
+    button_secondary_text_color_hover=_TEXT, button_secondary_text_color_hover_dark=_TEXT,
     button_secondary_border_color=_BORDER, button_secondary_border_color_dark=_BORDER,
+    button_secondary_border_color_hover=_GREEN, button_secondary_border_color_hover_dark=_GREEN,
+    checkbox_label_background_fill=_PANEL2, checkbox_label_background_fill_dark=_PANEL2,
+    checkbox_label_background_fill_hover=_BORDER, checkbox_label_background_fill_hover_dark=_BORDER,
+    checkbox_label_text_color=_TEXT, checkbox_label_text_color_dark=_TEXT,
+    link_text_color=_GREEN, link_text_color_dark=_GREEN,
+    link_text_color_hover=_GREEN, link_text_color_hover_dark=_GREEN,
 )
 
 # Belt-and-suspenders: also force the "dark" class on <html> at load, so
@@ -94,7 +107,12 @@ CUSTOM_CSS = f"""
 }}
 
 html, body {{ background: var(--agent-bg) !important; }}
-.gradio-container {{ max-width: 860px !important; margin: 0 auto !important; background: var(--agent-bg) !important; }}
+.gradio-container {{
+    max-width: 1180px !important;
+    width: 94% !important;
+    margin: 0 auto !important;
+    background: var(--agent-bg) !important;
+}}
 
 .agent-topbar {{
     display: flex;
@@ -247,6 +265,26 @@ html, body {{ background: var(--agent-bg) !important; }}
 #send_btn {{ min-width: 44px !important; max-width: 60px !important; }}
 
 footer {{ display: none !important; }}
+
+/* Safety net: some Gradio-internal elements (dropdown option lists,
+   table rows, etc.) don't fully follow the theme's hover tokens and can
+   render light-on-light or dark-on-dark text on hover. Force our palette
+   on every common interactive/hoverable element. */
+button:hover, .dropdown-arrow:hover,
+ul.options li:hover, ul.options li.selected,
+.item:hover, .item.selected,
+li.item:hover {{
+    color: var(--agent-text) !important;
+    background-color: var(--agent-border) !important;
+}}
+ul.options {{ background: var(--agent-panel2) !important; border-color: var(--agent-border) !important; }}
+ul.options li {{ color: var(--agent-text) !important; }}
+
+@media (max-width: 900px) {{
+    .gradio-container {{ width: 96% !important; }}
+    #main_columns {{ flex-direction: column !important; }}
+    #main_columns > * {{ width: 100% !important; flex: 1 1 100% !important; }}
+}}
 """
 
 
@@ -361,13 +399,14 @@ with gr.Blocks(title="Text to Command Agent") as demo:
         )
         convert_btn = gr.Button("➤", variant="primary", scale=1, elem_id="send_btn")
 
-    with gr.Row():
-        with gr.Column(scale=3):
+    with gr.Row(elem_id="main_columns"):
+        with gr.Column(scale=3, min_width=340):
             gr.HTML("<div class='section-label'>Result</div>")
             output_html = gr.HTML(_placeholder_html())
+            run_btn = gr.Button("▶️ Run this command in Docker sandbox", interactive=False, size="sm")
             sandbox_output = gr.HTML("")
 
-        with gr.Column(scale=2):
+        with gr.Column(scale=2, min_width=280):
             gr.HTML("<div class='section-label'>Settings</div>")
             with gr.Group(elem_classes=["settings-card"]):
                 os_dropdown = gr.Dropdown(OS_CHOICES, value=OS_CHOICES[0], label="Target OS / shell")
@@ -377,7 +416,6 @@ with gr.Blocks(title="Text to Command Agent") as demo:
                 gr.Markdown(
                     f"Docker sandbox: **{'🟢 available' if docker_available() else '🔴 unavailable — start Docker to enable'}**"
                 )
-                run_btn = gr.Button("▶️ Run last command in sandbox", interactive=False, size="sm")
 
             with gr.Accordion("💡 Examples", open=False):
                 for example in EXAMPLES:
